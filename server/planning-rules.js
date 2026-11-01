@@ -1,4 +1,5 @@
 import { portionStep } from './nutrition.js';
+export const planningGroupName = group => ({ A: 'Carb base group', B: 'Curry group', C: 'Group C' })[group];
 
 export const defaultPlanningRules = () => ({ minimums: { roti: 2, dosa: 1, paratha: 1, idli: 2 }, requireGroups: true, groupMinimumA: 1, groupMinimumB: 1, overrides: [] });
 export function planningRulesFor(profile) {
@@ -36,8 +37,8 @@ export function mealRuleIssues(entries, available, foods, rules) {
     for (const group of ['A', 'B']) {
       const minimum = rules[`groupMinimum${group}`];
       if (!minimum) continue;
-      if (!available.some(id => planningGroup(foods.get(id), rules) === group)) issues.push(`No group ${group} dish is available for this meal.`);
-      else if (!entries.some(e => planningGroup(foods.get(e.foodId), rules) === group && e.portions >= minimum)) issues.push(`Choose at least ${minimum} serving(s) of one group ${group} dish.`);
+      if (!available.some(id => planningGroup(foods.get(id), rules) === group)) issues.push(`No ${planningGroupName(group).toLowerCase()} dish is available for this meal.`);
+      else if (!entries.some(e => planningGroup(foods.get(e.foodId), rules) === group && e.portions >= minimum)) issues.push(`Choose at least ${minimum} serving(s) of one ${planningGroupName(group).toLowerCase()} dish.`);
     }
   }
   return issues;

@@ -11,7 +11,7 @@ import { catalog, foods, slots, dataReport, catalogVersion } from './catalog.js'
 import { nutrients, targets, totals, dateKey, monday, normalizeGender, portionStep } from './nutrition.js';
 import { turnoverEvidence, intakeHistory } from './turnover.js';
 import { generatePlan, refreshPlanNutrition, scoreStrategy } from './planner.js';
-import { planningRulesFor, defaultPlanningRules } from './planning-rules.js';
+import { planningRulesFor, defaultPlanningRules, planningGroupName } from './planning-rules.js';
 import { openStorage } from './storage.js';
 import { ensureInitialPlan } from './initial-plan.js';
 
@@ -103,7 +103,7 @@ app.put('/api/planning-rules', async (req, res) => {
     if (!Number.isInteger(value)) fail('Minimum piece counts must be whole numbers.');
     rules.minimums[type] = value;
   }
-  for (const group of ['A','B']) rules[`groupMinimum${group}`] = num(input[`groupMinimum${group}`],0,10,`Group ${group} minimum`);
+  for (const group of ['A','B']) rules[`groupMinimum${group}`] = num(input[`groupMinimum${group}`],0,10,`${planningGroupName(group)} minimum`);
   if (!Array.isArray(input.overrides) || input.overrides.length > catalog.length) fail('Invalid food group overrides.');
   const seen = new Set();
   rules.overrides = input.overrides.map(row=>{

@@ -54,7 +54,7 @@ test('planner enforces piece minima and one whole A/B choice per meal, with edit
 test('missing group options are reported; manual overrides remain scoreable; impossible hard rules fail clearly',()=>{
   const {student,foods,target}=fixture([dish('roti','Roti','A')]);
   const plan=generatePlan(student,foods,target,'2026-11-02');
-  assert.ok(plan.days.every(day=>day.entries.length&&day.warnings.some(w=>w.includes('No group B'))));
+  assert.ok(plan.days.every(day=>day.entries.length&&day.warnings.some(w=>w.includes('No curry group'))));
   const manual={days:week([{foodId:'roti',meal:'breakfast',portions:1}])};
   const score=scoreStrategy(manual,foods,target,student.profile,student);
   assert.ok(score.value>=0&&score.value<=100);
