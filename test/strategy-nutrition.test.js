@@ -76,10 +76,15 @@ test('custom, active and draft strategies show weekly, daily and meal nutrition 
     assert.equal(q('[name="minimum-roti"]').value,'2');
     change(q('#planning-rules-form'),'[name="minimum-roti"]','4');
     q('[name="requireGroups"]').checked=false;
+    for(const key of ['dailyMilk','dailyCurd','consistentPortions']){
+      assert.equal(q(`[name="${key}"]`).checked,true);
+      q(`[name="${key}"]`).checked=false;
+    }
     q('#planning-rules-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
     await new Promise(resolve=>setTimeout(resolve,20));
     assert.equal(q('[name="minimum-roti"]').value,'4');
     assert.equal(state.planningRules.requireGroups,false);
+    for(const key of ['dailyMilk','dailyCurd','consistentPortions'])assert.equal(state.planningRules[key],false);
     w.location.hash='nutrition';await new Promise(resolve=>setTimeout(resolve,20));
     change(q('#main'),'[data-food-planning-group="milk"]','A');
     await new Promise(resolve=>setTimeout(resolve,20));

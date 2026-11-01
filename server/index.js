@@ -48,6 +48,7 @@ function foodId(id) { if (typeof id !== 'string' || !foods.has(id)) fail('Choose
 function portionAmount(id, value) {
   const amount = num(value, .1, 10, 'Portions');
   if (portionStep(foods.get(id)) === 1 && !Number.isInteger(amount)) fail('Use whole portions for foods not served in bowls.');
+  if (!Number.isInteger(amount / portionStep(foods.get(id)))) fail('Use multiples of half a portion for bowl or katori servings.');
   return amount;
 }
 function meal(value) { if (!slots.includes(value)) fail('Choose breakfast, lunch, dinner or snacks.'); return value; }
@@ -98,6 +99,10 @@ app.put('/api/planning-rules', async (req, res) => {
   const input = req.body, rules = defaultPlanningRules();
   if (typeof input.requireGroups !== 'boolean') fail('Choose whether to require food groups.');
   rules.requireGroups = input.requireGroups;
+  for (const key of ['dailyMilk','dailyCurd','consistentPortions']) {
+    if (input[key] !== undefined && typeof input[key] !== 'boolean') fail('Daily food and consistent portion settings must be true or false.');
+    rules[key] = input[key] ?? rules[key];
+  }
   for (const type of Object.keys(rules.minimums)) {
     const value = num(input.minimums?.[type],0,10,`Minimum ${type} pieces`);
     if (!Number.isInteger(value)) fail('Minimum piece counts must be whole numbers.');

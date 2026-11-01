@@ -44,7 +44,7 @@ test('API persists a profile, isolates sessions, validates writes, logs meals an
     largeMenu[0].breakfast=manyFoods;
     const menuSaved=await request('menu','PUT',{menu:largeMenu,attendance:initial.data.attendance,collegeName:'Large menu',collegeId:'custom'});
     assert.equal(menuSaved.status,200);assert.deepEqual(menuSaved.data.menu[0].breakfast,manyFoods);
-    const largeStrategy=await request('strategies','POST',{name:'Many dishes',days:Array.from({length:7},()=>({entries:manyFoods.map(foodId=>({foodId,meal:'breakfast',portions:.25}))}))});
+    const largeStrategy=await request('strategies','POST',{name:'Many dishes',days:Array.from({length:7},()=>({entries:manyFoods.map(foodId=>({foodId,meal:'breakfast',portions:1}))}))});
     assert.equal(largeStrategy.status,201);
     assert.equal(largeStrategy.data.strategies.at(-1).days[0].entries.length,40);
     assert.equal((await request('colleges','POST',{name:'My actual college',menu:initial.data.menu})).status,201);

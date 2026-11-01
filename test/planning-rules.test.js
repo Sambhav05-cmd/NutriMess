@@ -111,10 +111,19 @@ test('HTTP rules persist, manual exceptions save, and login preserves the one-ti
     }
     assert.equal(ready.initialPlan.status,'ready');
     assert.ok(ready.plan.strategyScore.value>=0);
+    const draft=portions=>({name:'Portion validation',days:week([{foodId:'curd',meal:'lunch',portions}])});
+    assert.equal((await request('strategies/score','POST',draft(.25))).status,400);
+    assert.equal((await request('strategies/score','POST',draft(.5))).status,200);
+    assert.equal((await request('logs','POST',{date:ready.today,meal:'lunch',foodId:'curd',portions:.25})).status,400);
+    assert.equal((await request('logs','POST',{date:ready.today,meal:'lunch',foodId:'milk',portions:.5})).status,400);
+    const half=await request('logs','POST',{date:ready.today,meal:'lunch',foodId:'curd',portions:.5});
+    assert.equal(half.status,200);
+    await request(`logs/${half.data.logs.at(-1).id}`,'DELETE');
     const rules=defaultPlanningRules();rules.minimums.roti=3;rules.overrides=[{foodId:'nitk-curd',group:'B'}];
     const saved=await request('planning-rules','PUT',rules);
     assert.equal(saved.status,200);assert.deepEqual(saved.data.planningRules,rules);
     assert.equal((await request('planning-rules','PUT',{...rules,minimums:{...rules.minimums,roti:-1}})).status,400);
+    assert.equal((await request('planning-rules','PUT',{...rules,consistentPortions:'yes'})).status,400);
     const profile=await request('profile','PUT',saved.data.profile);
     assert.equal(profile.status,200);assert.deepEqual(profile.data.planningRules,rules);
     const manual={name:'I choose one roti',days:week([{foodId:'nitk-chapati',meal:'lunch',portions:1}])};

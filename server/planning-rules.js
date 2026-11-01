@@ -1,7 +1,11 @@
 import { portionStep } from './nutrition.js';
 export const planningGroupName = group => ({ A: 'Carb base group', B: 'Curry group', C: 'Group C' })[group];
 
-export const defaultPlanningRules = () => ({ minimums: { roti: 2, dosa: 1, paratha: 1, idli: 2 }, requireGroups: true, groupMinimumA: 1, groupMinimumB: 1, overrides: [] });
+export const defaultPlanningRules = () => ({ minimums: { roti: 2, dosa: 1, paratha: 1, idli: 2 }, requireGroups: true, groupMinimumA: 1, groupMinimumB: 1, dailyMilk: true, dailyCurd: true, consistentPortions: true, overrides: [] });
+export const dailyFoods = [
+  { rule: 'dailyMilk', label: 'milk', meal: 'breakfast', ids: ['milk', 'nitk-milk-with-bournvita'] },
+  { rule: 'dailyCurd', label: 'curd', meal: 'lunch', ids: ['curd', 'nitk-curd'] }
+];
 export function planningRulesFor(profile) {
   const defaults = defaultPlanningRules(), saved = profile?.planningRules || {};
   return { ...defaults, ...saved, minimums: { ...defaults.minimums, ...saved.minimums }, overrides: saved.overrides || [] };

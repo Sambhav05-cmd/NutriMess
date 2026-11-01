@@ -32,6 +32,7 @@ export function installStrategies(app, {foods,fail,text,num,date,meal,foodId,res
       return {entries:d.entries.map(e=>{
         const entry={foodId:foodId(e.foodId),meal:meal(e.meal),portions:num(e.portions,.1,10,'Portions')},key=`${entry.meal}:${entry.foodId}`;
         if(portionStep(foods.get(entry.foodId))===1&&!Number.isInteger(entry.portions))fail('Use whole portions for foods not served in bowls.');
+        if(!Number.isInteger(entry.portions/portionStep(foods.get(entry.foodId))))fail('Use multiples of half a portion for bowl or katori servings.');
         if(seen.has(key))fail('Each food can appear once per meal. Combine its portions.');seen.add(key);
         return entry;
       })};

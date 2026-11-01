@@ -12,7 +12,7 @@ export const nutrients = {
 export const macros = ['calories', 'protein', 'carbs', 'fat'];
 export const micros = Object.keys(nutrients).filter(k => !macros.includes(k));
 export function portionStep(food) {
-  return /\b(bowl|katori)\b/i.test(food?.serving || '') ? .25 : 1;
+  return /\b(bowl|katori)\b/i.test(food?.serving || '') ? .5 : 1;
 }
 export const zero = () => Object.fromEntries(Object.keys(nutrients).map(k => [k, 0]));
 export function add(a, b, factor = 1) {

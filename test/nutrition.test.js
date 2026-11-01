@@ -6,7 +6,7 @@ import { foods, catalog, sampleMenu } from '../server/catalog.js';
 import { generatePlan, isAllowed, targetPenalty, availabilityBounds } from '../server/planner.js';
 
 const profile = { name:'Test', age:21, sex:'male', weight:65, height:172, activity:'moderate', calorieCap:null, preferred:[], excluded:[], dairyFree:false };
-const state = () => ({ profile:{...profile}, menu:sampleMenu(), attendance:Array.from({length:7},()=>({breakfast:true,lunch:true,dinner:true,snacks:true})), extras:[], logs:[] });
+const state = () => ({ profile:{...profile,planningRules:{dailyMilk:false,dailyCurd:false,consistentPortions:false}}, menu:sampleMenu(), attendance:Array.from({length:7},()=>({breakfast:true,lunch:true,dinner:true,snacks:true})), extras:[], logs:[] });
 
 test('target penalties grow exponentially with relative gaps and micronutrient excess earns nothing',()=>{
   assert.equal(targetPenalty(100,100),0);
@@ -121,14 +121,14 @@ test('day-only extras do not leak into other days and logged meals are not dupli
   assert.ok(plan.days[0].total.calories>=foods.get('milk').nutrients.calories);
   assert.ok(!plan.days[0].entries.some(e=>e.meal==='breakfast'));
 });
-test('planner explores quarter servings and all dishes beyond the old menu limit',()=>{
+test('planner explores half servings for bowls and all dishes beyond the old menu limit',()=>{
   const target=targets(profile),s=state();
   const ids=Array.from({length:8},(_,i)=>`dish-${i}`);
-  const map=new Map(ids.map((id,i)=>[id,{id,ingredients:[],nutrients:{...zero(),...(i===7?Object.fromEntries(Object.entries(target).map(([k,v])=>[k,v/1.75])):{calories:10000})}}]));
+  const map=new Map(ids.map((id,i)=>[id,{id,serving:'1 bowl',ingredients:[],nutrients:{...zero(),...(i===7?Object.fromEntries(Object.entries(target).map(([k,v])=>[k,v/1.5])):{calories:10000})}}]));
   s.menu=Array.from({length:7},()=>({breakfast:ids,lunch:[],dinner:[],snacks:[]}));
   const plan=generatePlan(s,map,target,'2026-11-02');
   for(const day of plan.days){
-    assert.deepEqual(day.entries.map(e=>[e.foodId,e.portions]),[['dish-7',1.75]]);
+    assert.deepEqual(day.entries.map(e=>[e.foodId,e.portions]),[['dish-7',1.5]]);
     assert.ok(Math.abs(day.total.calories-target.calories)<.001);
   }
 });
