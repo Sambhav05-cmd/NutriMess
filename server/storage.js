@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createStudentStore } from './student-store.js';
+import { cancelInitialPlans } from './initial-plan.js';
 
 export function storageConflict() {
   const error = new Error('Your data changed in another request. Reload and try again.');
@@ -25,7 +26,7 @@ export async function openStorage({ catalog, uri = process.env.MONGODB_URI, data
     CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, student_id TEXT NOT NULL, expires INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS college_menus (id TEXT PRIMARY KEY, document TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS reference_documents (id TEXT PRIMARY KEY, document TEXT NOT NULL);`);
-  return {
+  const storage = {
     kind: 'sqlite',
     async getStudent(id) {
       const row = db.prepare('SELECT revision FROM students WHERE id = ?').get(id);
@@ -67,6 +68,7 @@ export async function openStorage({ catalog, uri = process.env.MONGODB_URI, data
     async listColleges() { return db.prepare('SELECT document FROM college_menus ORDER BY id').all().map(r => JSON.parse(r.document)); },
     async referenceLibrary() { return JSON.parse(db.prepare('SELECT document FROM reference_documents WHERE id = ?').get('library').document); },
     async ping() { db.prepare('SELECT 1').get(); },
-    async close() { db.close(); }
+    async close() { await cancelInitialPlans(storage); db.close(); }
   };
+  return storage;
 }

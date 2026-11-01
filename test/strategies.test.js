@@ -44,7 +44,14 @@ test('accounts protect saved strategies, revisions, activation snapshots, PDF do
     assert.ok(options.data.colleges.some(c=>c.id==='nitk-uploaded'));
     const registered=await request('auth/register','POST',signup);
     assert.equal(registered.status,200);assert.equal(registered.data.profile.height,151);assert.equal(registered.data.profile.weight,55);
-    assert.equal(registered.data.collegeId,'nitt-south');assert.equal(registered.data.activations.length,1);
+    assert.equal(registered.data.collegeId,'nitt-south');assert.equal(registered.data.initialPlan.status,'pending');
+    const deadline=Date.now()+30000;
+    let prepared=registered;
+    while(prepared.data.initialPlan.status==='pending'){
+      assert.ok(Date.now()<deadline,'Background plan did not finish');
+      await new Promise(resolve=>setTimeout(resolve,50));prepared=await request('state');
+    }
+    assert.equal(prepared.data.initialPlan.status,'ready');assert.equal(prepared.data.activations.length,1);
     const cookieBefore=cookie;
     assert.equal((await request('auth/logout','POST',{})).status,200);
     assert.equal((await request('state')).status,401);

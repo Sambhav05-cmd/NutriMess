@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb';
 import { createStudentCodec } from './student-store.js';
 import { storageConflict } from './storage.js';
+import { cancelInitialPlans } from './initial-plan.js';
 
 export async function openMongoStorage({ uri, databaseName, catalog = [] }) {
   const client = new MongoClient(uri, { maxPoolSize: 10, minPoolSize: 0, serverSelectionTimeoutMS: 15000, connectTimeoutMS: 10000, retryWrites: true });
@@ -80,7 +81,7 @@ export async function openMongoStorage({ uri, databaseName, catalog = [] }) {
       async listColleges() { return (await db.collection('college_menus').find({}).sort({ _id: 1 }).toArray()).map(r => r.document); },
       async referenceLibrary() { return (await db.collection('reference_documents').findOne({ _id: 'library' })).document; },
       async ping() { await db.command({ ping: 1 }); },
-      async close() { await client.close(); }
+      async close() { await cancelInitialPlans(storage); await client.close(); }
     };
     return storage;
   } catch (error) {

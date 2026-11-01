@@ -12,6 +12,7 @@ import { nutrients, targets, totals, dateKey, monday, normalizeGender, portionSt
 import { turnoverEvidence, intakeHistory } from './turnover.js';
 import { generatePlan, refreshPlanNutrition } from './planner.js';
 import { openStorage } from './storage.js';
+import { ensureInitialPlan } from './initial-plan.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const storage = await openStorage({ catalog });
@@ -59,6 +60,7 @@ function validateMenu(menu) {
 }
 async function response(req) {
   const s = req.student, target = targets(s.profile), today = dateKey();
+  if (s.initialPlan?.status === 'pending') ensureInitialPlan(storage, req.studentId);
   if(s.plan&&s.plan.catalogVersion!==catalogVersion){
     s.plan=refreshPlanNutrition(s.plan,foods,target,s);
     s.plan.catalogVersion=catalogVersion;

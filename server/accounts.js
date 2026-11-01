@@ -1,16 +1,16 @@
 import { randomBytes, randomUUID, scrypt as derive, timingSafeEqual, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
-import { dateKey, monday, targets, normalizeGender, migrateProfileGender } from './nutrition.js';
-import { sampleMenu, slots, foods } from './catalog.js';
+import { normalizeGender, migrateProfileGender } from './nutrition.js';
+import { sampleMenu, slots } from './catalog.js';
 import { listColleges } from './colleges.js';
-import { generatePlan } from './planner.js';
+import { ensureInitialPlan } from './initial-plan.js';
 const scrypt = promisify(derive);
 const digest = value => createHash('sha256').update(value).digest('hex');
 export function newStudent() {
   return { profile: { name: 'Student', age: 21, gender: 'male', height: 163, weight: 65, activity: 'moderate', calorieCap: null, preferred: [], excluded: [], dairyFree: false },
     collegeId: 'custom', collegeName: 'My hostel', menu: sampleMenu(), attendance: Array.from({length:7}, () => Object.fromEntries(slots.map(s => [s,true]))), extras: [], logs: [], colleges: [], strategies: [], activations: [], completedMeals: [], plan: null };
 }
-export function installAccounts(app, storage, {response}) {
+export function installAccounts(app, storage, {response, startInitialPlan = ensureInitialPlan}) {
   const attempts = new Map();
   function bindStudent(req, id, record) {
     req.studentId = id;
@@ -62,13 +62,12 @@ export function installAccounts(app, storage, {response}) {
         delete s.profile.sex;
         delete s.profile.decay;
         if(college)Object.assign(s,{collegeId:college.id,collegeName:college.name,menu:college.menu});
-        s.plan=generatePlan({...s,logs:[],completedMeals:[]},foods,targets(s.profile),monday());
-        const repeating=s.plan;
-        s.activations=[{id:randomUUID(),from:dateKey(),name:'Initial optimized plan',days:repeating.days.map(d=>({entries:d.entries}))}];
+        if (!s.plan && !s.activations?.length) s.initialPlan={status:'pending',jobId:randomUUID(),requestedAt:new Date().toISOString()};
         const salt=randomBytes(16).toString('hex'), hash=await scrypt(password,salt,64), id=legacyRow?legacyToken:randomUUID();
         try { await storage.createAccount({id,email,salt,password_hash:hash.toString('hex')},s,legacyRow?.revision); }
         catch(e){if(e.code===11000||String(e.code).includes('CONSTRAINT'))return res.status(409).json({error:'Account already exists.'});throw e;}
         await issue(req,res,id);
+        if (s.initialPlan?.status === 'pending') startInitialPlan(storage, id);
       }
       res.json(await response(req));
     }catch(e){next(e);}

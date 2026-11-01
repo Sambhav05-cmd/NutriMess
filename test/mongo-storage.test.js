@@ -130,6 +130,15 @@ test('MongoDB HTTP flows await writes and persist accounts, strategies, logs and
     assert.equal((await request('health')).status, 200);
     const registered = await request('auth/register', 'POST', { email: 'mongo@example.com', password: 'p', name: 'Mongo student', gender: 'male', collegeId: 'nitk-uploaded' });
     assert.equal(registered.status, 200);
+    assert.equal(registered.data.initialPlan.status, 'pending');
+    const deadline = Date.now() + 30000;
+    let prepared = registered;
+    while (prepared.data.initialPlan.status === 'pending') {
+      assert.ok(Date.now() < deadline, 'Background plan did not finish');
+      await new Promise(resolve => setTimeout(resolve, 50));
+      prepared = await request('state');
+    }
+    assert.equal(prepared.data.initialPlan.status, 'ready');
     const originalCookie = cookie;
     const duplicate = await request('auth/register', 'POST', { email: 'mongo@example.com', password: 'p', name: 'Duplicate', gender: 'male', collegeId: 'custom' });
     assert.equal(duplicate.status, 409);
