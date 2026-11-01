@@ -94,12 +94,20 @@ test('SQLite retains claimed legacy records, saved strategies and sessions acros
     const claimed=await request('auth/register','POST',{email:'legacy@example.com',password:'long-legacy-password',name:'Legacy Student',sex:'male',gender:'Man',collegeId:'custom'});
     assert.equal(claimed.profile.height,178);assert.equal(claimed.profile.weight,72);assert.equal(claimed.logs[0].id,'legacy-food');
     await request('strategies','POST',{name:'Persistent strategy',days:week()});
+    await request('logs/meal','PUT',{date:dateKey(),meal:'dinner',entries:[],expectedLogIds:[]});
     first.closeAllConnections();await new Promise(resolve=>first.close(resolve));
     const second=(await import('../server/index.js?persistence=second')).app.listen(0,'127.0.0.1');await once(second,'listening');
     base=`http://127.0.0.1:${second.address().port}/api/`;
     try {
       const restored=await request('state');assert.equal(restored.strategies[0].name,'Persistent strategy');assert.equal(restored.logs[0].id,'legacy-food');
+      assert.ok(restored.completedMeals.some(m=>m.date===dateKey()&&m.meal==='dinner'));
       const inspect=new DatabaseSync(filename);
+      const stored=JSON.parse(inspect.prepare('SELECT document FROM students WHERE id = ?').get(legacyId).document);
+      assert.equal(stored.storageVersion,1);
+      assert.equal(typeof stored.logs[0].foodId,'number');
+      assert.equal(stored.logs[0].meal,0);
+      assert.equal(stored.completedMealMasks[dateKey()],4);
+      assert.equal(inspect.prepare('SELECT food_key FROM food_ids WHERE id = ?').get(stored.logs[0].foodId).food_key,'milk');
       assert.equal(inspect.prepare('SELECT count(*) AS n FROM accounts').get().n,1);
       assert.equal(inspect.prepare('SELECT count(*) AS n FROM reference_documents').get().n,3);
       assert.ok(inspect.prepare('SELECT count(*) AS n FROM college_menus').get().n>=5);

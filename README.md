@@ -1,8 +1,8 @@
 # NutriMess 🌱
 
-A working JavaScript / Express nutrition planner for vegetarian hostel students. The frontend is responsive, buildless HTML, CSS and JavaScript; SQLite stores profiles, menus and logs locally.
+A working JavaScript / Express nutrition planner for vegetarian hostel students. The frontend is responsive, buildless HTML, CSS and JavaScript; MongoDB Atlas stores hosted accounts and student data; SQLite remains available for local development.
 
-For Netlify hosting with a persistent Express backend, see [DEPLOYMENT.md](DEPLOYMENT.md). The repository includes the Netlify build configuration and an optional Render backend blueprint.
+For Render Free + MongoDB Atlas Free hosting, see [DEPLOYMENT.md](DEPLOYMENT.md). The repository includes the Render blueprint and an optional Netlify frontend build.
 
 ## Run
 
@@ -13,7 +13,7 @@ npm install
 npm start
 ```
 
-Open **http://127.0.0.1:3000**. Optional environment variables: `PORT`, `HOST`, `DB_PATH`. The default listens on **0.0.0.0** (all IPv4 interfaces). Set `HOST=127.0.0.1` to restrict it to this computer. No API keys or external database required.
+Open **http://127.0.0.1:3000**. Optional environment variables: `PORT`, `HOST`, `DB_PATH`. The default listens on **0.0.0.0** (all IPv4 interfaces). Set `HOST=127.0.0.1` to restrict it to this computer. Without `MONGODB_URI`, local development uses SQLite. Hosted production requires `MONGODB_URI` and optionally `MONGODB_DB` (default `nutrimess`).
 
 For phone troubleshooting, open `http://<computer-LAN-IP>:3000/?debug=1`. The on-page startup diagnostics and browser console show script loading, account/catalog stages, request statuses and timings. Failures automatically reveal the panel, including when the app script cannot load; stalled startup is flagged after eight seconds and GET requests time out after twenty seconds. Debug API requests also print matching request IDs and timings in the server terminal. Set `DEBUG_REQUESTS=1` to log all server requests. Logs omit request bodies, passwords, cookies and tokens. Plain HTTP responses retain the security policy but do not force assets to HTTPS; HTTPS connections retain Helmet's HTTPS policies.
 
@@ -37,9 +37,13 @@ Existing prototype records are retained. Creating an account from a browser with
 
 ## Accounts and persistence
 
-SQLite stores accounts, hashed session tokens, student profile/log/strategy documents, shared college menus, and reference documents. Passwords use Node's scrypt with a unique random salt and constant-time verification. Login rotates the random session token; sessions expire after 30 days and logout revokes them. Cookies are HTTP-only, SameSite Strict and Secure on HTTPS. Auth endpoints are rate-limited per client IP. Cross-origin writes are rejected.
+MongoDB Atlas stores hosted accounts, hashed session tokens, compact student profile/log/strategy documents, shared college menus, and reference documents. Local development can use the SQLite adapter. Passwords use Node's scrypt with a unique random salt and constant-time verification. Login rotates the random session token; sessions expire after 30 days and logout revokes them. Cookies are HTTP-only, SameSite Strict and Secure on HTTPS. Auth endpoints are rate-limited per client IP. Cross-origin writes are rejected.
 
-The default database is `.data/nutrimess.sqlite`; set `DB_PATH` to use another location. The `students` document contains actual logs, saved strategy revisions, explicit completed/skipped meal markers and activation snapshots. Missed-meal estimates are derived on read, so no background task or PDF storage is required. Separate `college_menus` and `reference_documents` tables are seeded idempotently at startup from versioned source snapshots. User-created templates never overwrite the shared institutional presets.
+Set `MONGODB_URI` for Atlas and `MONGODB_DB` for its database name. Without a URI, non-production runs use `.data/nutrimess.sqlite`; set `DB_PATH` to use another local location. Production refuses an absent Atlas URI. The `students` document contains actual logs, saved strategy revisions, explicit completed/skipped meal markers and activation snapshots. Missed-meal estimates are derived on read, so no background task or PDF storage is required. Separate `college_menus` and `reference_documents` collections/tables are seeded idempotently at startup from versioned source snapshots. User-created templates never overwrite the shared institutional presets.
+
+Student documents use compact storage version 1. The `food_ids` dictionary maps stable integer IDs to catalog string keys; mappings survive catalog reordering and retain retired foods. Stored food references use those integers, and meal values use `breakfast=0`, `lunch=1`, `dinner=2`, `snacks=3`. Explicit meal completion is stored as `completedMealMasks`, an object mapping dates to four-bit masks (bits 0–3 follow the same meal order). Fractional portions remain numeric. The storage adapter restores readable string IDs and completion records for the API and planner; shared catalog/menu source documents retain their readable IDs.
+
+The local SQLite adapter migrates legacy student documents transactionally. Atlas retains compact encoding and a persistent numeric food dictionary; conditional saves use revisions to reject stale writes. Back up student data and its food dictionary together. The read-only SQLite import command transfers missing accounts, student documents and unexpired sessions without replacing existing Atlas records. See the deployment guide for preview and import commands.
 
 ## Datasets and units
 
@@ -123,7 +127,9 @@ References for the coefficients: [B12](https://www.ncbi.nlm.nih.gov/books/NBK114
 ## Structure and deployment scope
 
 ```text
-server/index.js       Express routes, validation, cookie sessions, SQLite
+server/index.js       Express routes, validation and application startup
+server/storage.js     Atlas selection and local SQLite fallback
+server/mongo-store.js MongoDB transactions, compact documents and session storage
 server/nutrition.js   units, targets, totals, date helpers
 server/turnover.js    sourced nutrient-specific intake-history weighting
 server/catalog.js     IFCT catalog and ingredient-based recipe estimates
@@ -135,9 +141,9 @@ data/                saved turnover evidence and official USDA dairy snapshot
 .data/               generated catalog and SQLite (ignored by Git)
 ```
 
-This is a **localhost prototype with password accounts**. Before public deployment add email verification and account recovery, HTTPS termination, shared rate limiting for multiple instances, worker-based optimization for larger workloads, backups, data retention and deletion controls, privacy review and qualified nutrition review. SQLite writes are atomic; numeric and catalog inputs are validated, same-origin writes are enforced, and Helmet sets security headers.
+This is a **localhost prototype with password accounts**. Before public deployment add email verification and account recovery, HTTPS termination, shared rate limiting for multiple instances, worker-based optimization for larger workloads, backups, data retention and deletion controls, privacy review and qualified nutrition review. Account creation is transactional, and student saves reject stale revisions; numeric and catalog inputs are validated, same-origin writes are enforced, and Helmet sets security headers.
 
-Menus, profiles and logs survive server restarts in `.data/nutrimess.sqlite`. The normalized catalog regenerates from the supplied CSV on startup. Clearing the browser cookie signs you out; log in with the same credentials to recover your account. JSON import and password recovery are not implemented.
+Hosted menus, profiles and logs survive Render restarts in Atlas. Local SQLite data remains in `.data/nutrimess.sqlite`. The normalized catalog regenerates from the supplied CSV on startup. Clearing the browser cookie signs you out; log in with the same credentials to recover your account. JSON import and password recovery are not implemented.
 
 ## Saved source snapshots
 

@@ -35,24 +35,24 @@ export function installStrategies(app, {foods,fail,text,num,date,meal,foodId,res
       })};
     })};
   }
-  app.post('/api/strategies',(req,res)=>{
+  app.post('/api/strategies',async(req,res)=>{
     if(req.student.strategies.length>=50)fail('You can save up to 50 strategies.');
     req.student.strategies.push({...validate(req.body),id:randomUUID(),updatedAt:new Date().toISOString(),revision:1});
-    req.save();res.status(201).json(response(req));
+    await req.save();res.status(201).json(await response(req));
   });
-  app.put('/api/strategies/:id',(req,res)=>{
+  app.put('/api/strategies/:id',async(req,res)=>{
     const strategy=find(req);
     if(req.body.revision!==strategy.revision)return res.status(409).json({error:'This strategy changed. Reopen it before editing.'});
-    Object.assign(strategy,validate(req.body),{updatedAt:new Date().toISOString(),revision:strategy.revision+1});req.save();res.json(response(req));
+    Object.assign(strategy,validate(req.body),{updatedAt:new Date().toISOString(),revision:strategy.revision+1});await req.save();res.json(await response(req));
   });
-  app.delete('/api/strategies/:id',(req,res)=>{find(req);req.student.strategies=req.student.strategies.filter(s=>s.id!==req.params.id);req.save();res.json(response(req));});
-  app.post('/api/strategies/:id/activate',(req,res)=>{
+  app.delete('/api/strategies/:id',async(req,res)=>{find(req);req.student.strategies=req.student.strategies.filter(s=>s.id!==req.params.id);await req.save();res.json(await response(req));});
+  app.post('/api/strategies/:id/activate',async(req,res)=>{
     const strategy=find(req), from=dateKey();
     req.student.activations=req.student.activations.filter(a=>a.from<from);
     req.student.activations.push({id:randomUUID(),strategyId:strategy.id,from,name:strategy.name,days:structuredClone(strategy.days)});
-    req.save();res.json(response(req));
+    await req.save();res.json(await response(req));
   });
-  app.post('/api/strategies/:id/log',(req,res)=>{
+  app.post('/api/strategies/:id/log',async(req,res)=>{
     const strategy=find(req), d=date(req.body.date), slot=meal(req.body.meal);
     if(d>dateKey())fail('Future meals cannot be logged yet.');
     if(req.student.logs.some(l=>l.date===d&&l.meal===slot)||req.student.completedMeals.some(l=>l.date===d&&l.meal===slot))return res.status(409).json({error:'This meal is already recorded. Edit it in the journal.'});
@@ -61,9 +61,9 @@ export function installStrategies(app, {foods,fail,text,num,date,meal,foodId,res
     if(!entries.length)fail('This strategy has no foods for that meal.');
     if(req.student.logs.length+entries.length>15000)fail('The log limit has been reached.');
     req.student.logs.push(...entries.map(e=>({...e,id:randomUUID(),date:d})));
-    req.student.completedMeals.push({date:d,meal:slot});req.student.plan=null;req.save();res.json(response(req));
+    req.student.completedMeals.push({date:d,meal:slot});req.student.plan=null;await req.save();res.json(await response(req));
   });
-  app.get('/api/strategies/:id/pdf',(req,res)=>{
+  app.get('/api/strategies/:id/pdf',async(req,res)=>{
     const s=find(req), doc=new PDFDocument({margin:48,size:'A4',bufferPages:true});
     res.type('application/pdf');res.set('Content-Disposition',`attachment; filename="nutrimess-plan-${s.id}.pdf"`);
     doc.pipe(res);

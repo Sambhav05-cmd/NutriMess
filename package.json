@@ -11,12 +11,15 @@
     "dev": "node --watch server/index.js",
     "import:data": "node scripts/import-catalog.js",
     "build:netlify": "node scripts/build-netlify.js",
+    "migrate:sqlite": "node scripts/migrate-sqlite.js",
+    "test:mongo": "node --test test/mongo-storage.test.js",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "csv-parse": "^7.0.3",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
+    "mongodb": "^7.8.0",
     "pdfkit": "^0.20.2"
   },
   "devDependencies": {

@@ -1,10 +1,9 @@
-# Optional persistent backend for the Netlify frontend.
-# Render's Starter service and persistent disk are paid resources.
+# Hosts the frontend and API together. User data is persisted in MongoDB Atlas.
 services:
   - type: web
     name: nutrimess-api
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm ci --omit=dev && npm run import:data
     startCommand: npm start
     healthCheckPath: /api/health
@@ -15,13 +14,9 @@ services:
         value: 24.11.0
       - key: HOST
         value: 0.0.0.0
-      - key: DB_PATH
-        value: /opt/render/project/src/.data/nutrimess.sqlite
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: nutrimess
       - key: TRUST_PROXY
         value: "1"
-      - key: PUBLIC_ORIGIN
-        sync: false
-    disk:
-      name: nutrimess-data
-      mountPath: /opt/render/project/src/.data
-      sizeGB: 1
