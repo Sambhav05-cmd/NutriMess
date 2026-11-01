@@ -1,0 +1,177 @@
+{
+  "reviewedAt": "2026-10-30",
+  "scope": "Reference data for education. Planning targets remain the app’s adult 19–30 US DRI values; Indian anthropometry defaults are separate. Pregnancy and lactation rows are source context and are not supported planning profiles.",
+  "records": [
+    {
+      "id": "anthropometry",
+      "title": "Indian adult reference anthropometry",
+      "sourceUrl": "https://aspirational.vikaspedia.in/viewcontent/health/nutrition/dietary-guidelines-1/recommended-dietary-allowance?lgn=en",
+      "publisher": "Vikaspedia, Government of India knowledge portal",
+      "kind": "reference-defaults",
+      "columns": [
+        "Reference sex",
+        "Height (cm)",
+        "Weight (kg)"
+      ],
+      "rows": [
+        [
+          "Male",
+          163,
+          65
+        ],
+        [
+          "Female",
+          151,
+          55
+        ]
+      ],
+      "note": "Reference person values, not a measured individual or a claim about population means. All defaults are editable. Age 21 and moderate activity are application starting choices."
+    },
+    {
+      "id": "b12-rda",
+      "title": "Vitamin B12 intake reference (mcg/day)",
+      "sourceUrl": "https://ods.od.nih.gov/factsheets/VitaminB12-HealthProfessional/",
+      "publisher": "NIH Office of Dietary Supplements",
+      "kind": "RDA / AI",
+      "columns": [
+        "Age",
+        "Male",
+        "Female",
+        "Pregnancy",
+        "Lactation"
+      ],
+      "rows": [
+        [
+          "Birth to 6 months (AI)",
+          0.4,
+          0.4,
+          null,
+          null
+        ],
+        [
+          "7–12 months (AI)",
+          0.5,
+          0.5,
+          null,
+          null
+        ],
+        [
+          "1–3 years",
+          0.9,
+          0.9,
+          null,
+          null
+        ],
+        [
+          "4–8 years",
+          1.2,
+          1.2,
+          null,
+          null
+        ],
+        [
+          "9–13 years",
+          1.8,
+          1.8,
+          null,
+          null
+        ],
+        [
+          "14–18 years",
+          2.4,
+          2.4,
+          2.6,
+          2.8
+        ],
+        [
+          "19+ years",
+          2.4,
+          2.4,
+          2.6,
+          2.8
+        ]
+      ],
+      "note": "Adult planning uses 2.4 mcg/day. Fortification and food preparation vary. Values apply to intake, not measured body stores."
+    },
+    {
+      "id": "magnesium-rda",
+      "title": "Magnesium intake reference (mg/day)",
+      "sourceUrl": "https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/",
+      "publisher": "NIH Office of Dietary Supplements",
+      "kind": "RDA / AI",
+      "columns": [
+        "Age",
+        "Male",
+        "Female",
+        "Pregnancy",
+        "Lactation"
+      ],
+      "rows": [
+        [
+          "Birth to 6 months (AI)",
+          30,
+          30,
+          null,
+          null
+        ],
+        [
+          "7–12 months (AI)",
+          75,
+          75,
+          null,
+          null
+        ],
+        [
+          "1–3 years",
+          80,
+          80,
+          null,
+          null
+        ],
+        [
+          "4–8 years",
+          130,
+          130,
+          null,
+          null
+        ],
+        [
+          "9–13 years",
+          240,
+          240,
+          null,
+          null
+        ],
+        [
+          "14–18 years",
+          410,
+          360,
+          400,
+          360
+        ],
+        [
+          "19–30 years",
+          400,
+          310,
+          350,
+          310
+        ],
+        [
+          "31–50 years",
+          420,
+          320,
+          360,
+          320
+        ],
+        [
+          "51+ years",
+          420,
+          320,
+          null,
+          null
+        ]
+      ],
+      "note": "The 350 mg/day adult upper limit concerns supplements and medications, not naturally occurring food magnesium; it is not imposed as a food limit."
+    }
+  ]
+}

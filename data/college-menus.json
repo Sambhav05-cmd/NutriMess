@@ -1,0 +1,392 @@
+[
+  {
+    "id": "nitt-south",
+    "name": "NIT Tiruchirappalli \u00b7 South \u00b7 tentative subset",
+    "example": false,
+    "sourceUrl": "https://nitt.edu/home/MENU-NITT-MESSES.pdf",
+    "sourceTitle": "NITT hostel administration tentative weekly menus",
+    "sourcePage": 1,
+    "reviewedAt": "2026-10-30",
+    "status": "Tentative institutional menu; publication date unspecified. Confirm locally.",
+    "mappingNote": "Partial vegetarian catalog matches only. Missing dishes are omitted. Generic dal, salad, raita, paneer and rice use recipe estimates; BBJ/T/C/M interpreted as milk option. No claim of current service or exact mess nutrition.",
+    "menu": [
+      {
+        "breakfast": [],
+        "lunch": [
+          "rice",
+          "chapati",
+          "curd"
+        ],
+        "dinner": [
+          "idli",
+          "rice",
+          "buttermilk"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "dosa"
+        ],
+        "lunch": [
+          "rice",
+          "chapati",
+          "curd"
+        ],
+        "dinner": [
+          "chapati",
+          "buttermilk"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "idli"
+        ],
+        "lunch": [
+          "rice",
+          "chapati",
+          "curd",
+          "chana"
+        ],
+        "dinner": [
+          "chapati",
+          "buttermilk"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [],
+        "lunch": [
+          "rice",
+          "chapati",
+          "curd"
+        ],
+        "dinner": [
+          "chapati",
+          "chana",
+          "rice",
+          "buttermilk"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [],
+        "lunch": [
+          "rice",
+          "chapati",
+          "curd"
+        ],
+        "dinner": [
+          "dosa"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [],
+        "lunch": [
+          "rice",
+          "chapati",
+          "curd",
+          "dal"
+        ],
+        "dinner": [
+          "chapati",
+          "raita",
+          "banana"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "dosa"
+        ],
+        "lunch": [],
+        "dinner": [
+          "chapati",
+          "banana"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "nitt-north",
+    "name": "NIT Tiruchirappalli \u00b7 North \u00b7 tentative subset",
+    "example": false,
+    "sourceUrl": "https://nitt.edu/home/MENU-NITT-MESSES.pdf",
+    "sourceTitle": "NITT hostel administration tentative weekly menus",
+    "sourcePage": 2,
+    "reviewedAt": "2026-10-30",
+    "status": "Tentative institutional menu; publication date unspecified. Confirm locally.",
+    "mappingNote": "Partial vegetarian catalog matches only. Missing dishes are omitted. Generic dal, salad, raita, paneer and rice use recipe estimates; BBJ/T/C/M interpreted as milk option. No claim of current service or exact mess nutrition.",
+    "menu": [
+      {
+        "breakfast": [
+          "idli",
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "salad",
+          "rice",
+          "curd"
+        ],
+        "dinner": [
+          "palak",
+          "chapati",
+          "salad"
+        ],
+        "snacks": []
+      },
+      {
+        "breakfast": [
+          "poha",
+          "curd",
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "salad",
+          "rice",
+          "curd",
+          "dal"
+        ],
+        "dinner": [
+          "chana",
+          "chapati",
+          "salad"
+        ],
+        "snacks": []
+      },
+      {
+        "breakfast": [
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "salad",
+          "rice",
+          "curd"
+        ],
+        "dinner": [
+          "rice",
+          "chapati",
+          "salad"
+        ],
+        "snacks": []
+      },
+      {
+        "breakfast": [
+          "dosa",
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "salad",
+          "rice",
+          "curd"
+        ],
+        "dinner": [
+          "rice",
+          "chapati",
+          "salad",
+          "banana"
+        ],
+        "snacks": []
+      },
+      {
+        "breakfast": [
+          "chana",
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "salad",
+          "rice",
+          "curd"
+        ],
+        "dinner": [
+          "chapati",
+          "salad"
+        ],
+        "snacks": []
+      },
+      {
+        "breakfast": [
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "salad",
+          "rice",
+          "curd"
+        ],
+        "dinner": [],
+        "snacks": []
+      },
+      {
+        "breakfast": [
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "salad"
+        ],
+        "dinner": [
+          "chana",
+          "banana"
+        ],
+        "snacks": []
+      }
+    ]
+  },
+  {
+    "id": "iit-palakkad",
+    "name": "IIT Palakkad \u00b7 2026 tender sample subset",
+    "example": false,
+    "sourceUrl": "https://iitpkd.ac.in/sites/default/files/2026-04/TENDER%20DOC%20FOR%20MESS%20SERVICE.pdf",
+    "sourceTitle": "IIT Palakkad hostel catering tender 2026-27, Annexure A",
+    "sourcePage": "33\u201334",
+    "reviewedAt": "2026-10-30",
+    "status": "Sample in tender published 2026-04-07; not a verified current operational menu.",
+    "mappingNote": "Partial vegetarian catalog matches only. Paneer dishes and generic dal use recipe proxies. Unsupported dishes are omitted; add them from your actual mess before planning. Slash-separated alternatives are options, not a guarantee of simultaneous availability.",
+    "menu": [
+      {
+        "breakfast": [
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "rice",
+          "chana",
+          "buttermilk"
+        ],
+        "dinner": [
+          "palak",
+          "raita",
+          "chapati"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "milk",
+          "upma",
+          "poha",
+          "curd"
+        ],
+        "lunch": [
+          "curd",
+          "dal"
+        ],
+        "dinner": [
+          "chapati"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "rice",
+          "buttermilk"
+        ],
+        "dinner": [
+          "paneer",
+          "lassi"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "milk"
+        ],
+        "lunch": [
+          "chapati",
+          "rice",
+          "curd"
+        ],
+        "dinner": [
+          "chapati",
+          "rice"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "milk",
+          "dosa"
+        ],
+        "lunch": [
+          "chapati",
+          "rice"
+        ],
+        "dinner": [
+          "paneer",
+          "chapati"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "milk",
+          "chana"
+        ],
+        "lunch": [
+          "chapati",
+          "buttermilk"
+        ],
+        "dinner": [
+          "chapati"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      },
+      {
+        "breakfast": [
+          "milk",
+          "dosa"
+        ],
+        "lunch": [
+          "raita"
+        ],
+        "dinner": [
+          "chapati",
+          "rice",
+          "dal"
+        ],
+        "snacks": [
+          "milk"
+        ]
+      }
+    ]
+  }
+]

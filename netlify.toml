@@ -1,0 +1,7 @@
+# NUTRIMESS_API_ORIGIN must be the HTTPS origin of the persistent Express backend.
+[build]
+  command = "npm run build:netlify"
+  publish = "dist/netlify"
+
+[build.environment]
+  NODE_VERSION = "24"

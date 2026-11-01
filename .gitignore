@@ -1,0 +1,96 @@
+# Dependencies and generated build/test output
+node_modules/
+node_modules
+dist/
+build/
+coverage/
+.nyc_output/
+.cache/
+__pycache__/
+*.py[cod]
+
+# Local user database, accounts, sessions, logs and generated food caches
+.data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.dump
+backups/
+dumps/
+exports/
+uploads/
+*.bak
+*.backup
+nutrimess-*.json
+
+# Local secrets and credentials (sanitized templates can be committed)
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.template
+.npmrc
+.aws/
+.codex/
+.agents/
+.ssh/
+secrets/
+credentials.json
+*service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Netlify local state and runtime/debug files
+.netlify/
+*.log
+*.pid
+*.pid.lock
+*.tmp
+*.tsbuildinfo
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.~lock.*#
+*.xlsx#
+*.csv#
+
+# Analysis reports and deployment archives are generated locally.
+outputs/
+artifacts/
+*.zip
+
+# Downloaded reference exports that the app does not import.
+/FoodData_Central_foundation_food_csv_2026-10-29/
+/nitk_mess_unique_items_complete_modeled_nutrition.csv
+/nitk_mess_unique_items_with_vitamins.csv
+/nitk_mess_weekly_nutrients_source_verified.csv
+
+# Vendor only runtime data and attribution, not upstream Git repositories or tooling.
+/ifct2017/*
+!/ifct2017/LICENSE
+!/ifct2017/README.md
+!/ifct2017/compositions/
+/ifct2017/compositions/*
+!/ifct2017/compositions/index.csv
+/Indian-Nutrient-Databank-INDB-/*
+!/Indian-Nutrient-Databank-INDB-/README.md
+!/Indian-Nutrient-Databank-INDB-/INDB.do
+!/Indian-Nutrient-Databank-INDB-/recipes.xlsx
+!/Indian-Nutrient-Databank-INDB-/UK_fct.xlsx
+!/Indian-Nutrient-Databank-INDB-/US_fct.xlsx
+
+# Keep the required nutrition inputs, attribution, data/ reference documents,
+# source code, tests and package-lock.json.

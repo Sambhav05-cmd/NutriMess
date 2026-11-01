@@ -1,0 +1,371 @@
+{
+  "Aloo paratha (2)": {
+    "dataset": "INDB",
+    "code": "ASC098"
+  },
+  "Curd": {
+    "dataset": "INDB",
+    "code": "L520"
+  },
+  "Pickle": {
+    "dataset": "INDB",
+    "code": "ASC507"
+  },
+  "Bread": {
+    "dataset": "INDB",
+    "code": "U511"
+  },
+  "Butter": {
+    "dataset": "INDB",
+    "code": "T500"
+  },
+  "Jam": {
+    "dataset": "INDB",
+    "code": "W504"
+  },
+  "Ketchup": {
+    "dataset": "INDB",
+    "code": "BFP602"
+  },
+  "Tea": {
+    "dataset": "INDB",
+    "code": "ASC001"
+  },
+  "Coffee": {
+    "dataset": "INDB",
+    "code": "ASC002"
+  },
+  "Milk with Bournvita": {
+    "dataset": "IFCT",
+    "code": "L002"
+  },
+  "Green peas-onion-carrot-paneer bhurji": {
+    "dataset": "INDB",
+    "code": "ASC191"
+  },
+  "Chapati": {
+    "dataset": "INDB",
+    "code": "ASC096"
+  },
+  "White rice": {
+    "dataset": "INDB",
+    "code": "ASC113"
+  },
+  "Boiled rice": {
+    "dataset": "INDB",
+    "code": "ASC113"
+  },
+  "Seasonal dry vegetables": {
+    "dataset": "INDB",
+    "code": "BFP278"
+  },
+  "Veg Kolhapuri": null,
+  "Sambar": {
+    "dataset": "INDB",
+    "code": "ASC167"
+  },
+  "Salad": {
+    "dataset": "INDB",
+    "code": "ASC260"
+  },
+  "Chana dal tadka": {
+    "dataset": "INDB",
+    "code": "OSR142"
+  },
+  "Mysore bonda (3)": {
+    "dataset": "INDB",
+    "code": "ASC360"
+  },
+  "Veg korma": {
+    "dataset": "INDB",
+    "code": "BFP241"
+  },
+  "Rice": {
+    "dataset": "INDB",
+    "code": "ASC113"
+  },
+  "Jeera rice": {
+    "dataset": "INDB",
+    "code": "BFP134"
+  },
+  "Dal fry": {
+    "dataset": "INDB",
+    "code": "ASC151"
+  },
+  "Long beans dry": {
+    "dataset": "INDB",
+    "code": "ASC179"
+  },
+  "Rasam": {
+    "dataset": "INDB",
+    "code": "BFP176"
+  },
+  "Papad": {
+    "dataset": "IFCT",
+    "code": "B003"
+  },
+  "Masala dosa (1)": {
+    "dataset": "INDB",
+    "code": "ASC146"
+  },
+  "Set dosa (1)": {
+    "dataset": "INDB",
+    "code": "BFP148"
+  },
+  "Chutney": {
+    "dataset": "INDB",
+    "code": "ASC386"
+  },
+  "Oats": {
+    "dataset": "INDB",
+    "code": "A508"
+  },
+  "Seasonal fruits": {
+    "dataset": "INDB",
+    "code": "ASC265"
+  },
+  "Tondakai palya": {
+    "dataset": "IFCT",
+    "code": "D054"
+  },
+  "Soyabean masala": {
+    "dataset": "INDB",
+    "code": "ASC164"
+  },
+  "Sweet kheer": {
+    "dataset": "INDB",
+    "code": "ASC282"
+  },
+  "Samosa": {
+    "dataset": "INDB",
+    "code": "ASC361"
+  },
+  "Dal": {
+    "dataset": "INDB",
+    "code": "ASC151"
+  },
+  "Paneer veg biryani": {
+    "dataset": "INDB",
+    "code": "ASC123"
+  },
+  "Raita": {
+    "dataset": "INDB",
+    "code": "ASC269"
+  },
+  "Fruit custard": {
+    "dataset": "INDB",
+    "code": "ASC302"
+  },
+  "Idli (3)": {
+    "dataset": "INDB",
+    "code": "ASC144"
+  },
+  "Vada (2)": {
+    "dataset": "INDB",
+    "code": "BFP436"
+  },
+  "Cornflakes": {
+    "dataset": "INDB",
+    "code": "ASC051"
+  },
+  "Banana": {
+    "dataset": "INDB",
+    "code": "E503"
+  },
+  "Dal tadka": {
+    "dataset": "INDB",
+    "code": "ASC151"
+  },
+  "Cabbage fry": {
+    "dataset": "INDB",
+    "code": "ASC173"
+  },
+  "Mixed pulao": {
+    "dataset": "INDB",
+    "code": "ASC115"
+  },
+  "Pista ice cream": {
+    "dataset": "INDB",
+    "code": "I501"
+  },
+  "Vada pav (2)": null,
+  "Green chutney": {
+    "dataset": "INDB",
+    "code": "ASC387"
+  },
+  "Lemon rice": {
+    "dataset": "INDB",
+    "code": "ASC124"
+  },
+  "Veg dry": {
+    "dataset": "INDB",
+    "code": "BFP278"
+  },
+  "Dal makhani": {
+    "dataset": "INDB",
+    "code": "OSR139"
+  },
+  "Paneer do pyaza": {
+    "dataset": "INDB",
+    "code": "OSR074"
+  },
+  "Poori (4)": {
+    "dataset": "INDB",
+    "code": "ASC107"
+  },
+  "Bhaji": {
+    "dataset": "INDB",
+    "code": "BFP239"
+  },
+  "Mixed sprouts": {
+    "dataset": "INDB",
+    "code": "ASC259"
+  },
+  "Moong": {
+    "dataset": "INDB",
+    "code": "BFP178"
+  },
+  "Peanuts": {
+    "dataset": "INDB",
+    "code": "B505"
+  },
+  "Grams": {
+    "dataset": "INDB",
+    "code": "B511"
+  },
+  "Veg pulao": {
+    "dataset": "INDB",
+    "code": "ASC115"
+  },
+  "Yellow dal": {
+    "dataset": "INDB",
+    "code": "ASC151"
+  },
+  "Beetroot palya": {
+    "dataset": "INDB",
+    "code": "BFP278"
+  },
+  "Rajma masala": {
+    "dataset": "INDB",
+    "code": "ASC165"
+  },
+  "Gulab jamun": {
+    "dataset": "INDB",
+    "code": "ASC348"
+  },
+  "Veg sevai upma": {
+    "dataset": "INDB",
+    "code": "BFP040"
+  },
+  "Mixed veg curry": {
+    "dataset": "INDB",
+    "code": "BFP241"
+  },
+  "Sweet lassi": {
+    "dataset": "INDB",
+    "code": "ASC021"
+  },
+  "Cut fruits": {
+    "dataset": "INDB",
+    "code": "ASC265"
+  },
+  "Upma": {
+    "dataset": "INDB",
+    "code": "BFP039"
+  },
+  "Methi poori": {
+    "dataset": "INDB",
+    "code": "ASC109"
+  },
+  "Aloo shimla": {
+    "dataset": "INDB",
+    "code": "ASC172"
+  },
+  "Kabuli chana masala": {
+    "dataset": "INDB",
+    "code": "BFP185"
+  },
+  "Chocolate ice cream": {
+    "dataset": "INDB",
+    "code": "ASC304"
+  },
+  "Veg cutlet": {
+    "dataset": "INDB",
+    "code": "ASC366"
+  },
+  "Sauce": {
+    "dataset": "INDB",
+    "code": "BFP602"
+  },
+  "Tomato rice": {
+    "dataset": "INDB",
+    "code": "ASC128"
+  },
+  "Aloo matar masala": {
+    "dataset": "INDB",
+    "code": "ASC190"
+  },
+  "Paneer": {
+    "dataset": "IFCT",
+    "code": "L003"
+  },
+  "Onion uthappam (1)": {
+    "dataset": "INDB",
+    "code": "ASC148"
+  },
+  "Veg chamoli masala": null,
+  "Mixed veg dry": {
+    "dataset": "INDB",
+    "code": "BFP278"
+  },
+  "Pani puri (5)": null,
+  "Sev puri": null,
+  "Gobi dry": {
+    "dataset": "INDB",
+    "code": "ASC180"
+  },
+  "Paneer butter masala": {
+    "dataset": "INDB",
+    "code": "ASC222"
+  },
+  "Poha-peanuts": {
+    "dataset": "INDB",
+    "code": "BFP044"
+  },
+  "Poori (unlimited)": {
+    "dataset": "INDB",
+    "code": "ASC107"
+  },
+  "Aloo bharta": {
+    "dataset": "INDB",
+    "code": "BFP239"
+  },
+  "Lauki dry": {
+    "dataset": "IFCT",
+    "code": "D007"
+  },
+  "Buttermilk": {
+    "dataset": "INDB",
+    "code": "L521"
+  },
+  "Special ice cream": {
+    "dataset": "INDB",
+    "code": "I501"
+  },
+  "Gobi bajji (4)": {
+    "dataset": "INDB",
+    "code": "ASC353"
+  },
+  "Tamarind rice": {
+    "dataset": "INDB",
+    "code": "ASC127"
+  },
+  "Toor dal": {
+    "dataset": "INDB",
+    "code": "BFP172"
+  },
+  "Paneer curry": {
+    "dataset": "INDB",
+    "code": "ASC195"
+  }
+}
