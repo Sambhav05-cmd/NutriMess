@@ -90,7 +90,7 @@ export const messMenuPreset=messMenu.preset;
 dataReport.messMenu=messMenu.report;
 dataReport.sourcePriority={primary:'Supplied IFCT dataset and saved official USDA records',fallback:'Uploaded recipe CSVs and INDB Excel for foods/nutrients without a compatible primary match',matching:'Prepared form and weight must match; raw grains are not substituted for cooked dishes',usdaExport:imported.report.usda.message};
 fs.writeFileSync(new URL('../.data/indb-import-report.json',import.meta.url),JSON.stringify(indb.report,null,2)+'\n');
-for (const food of catalog) food.portionStep = portionStep(food);
+for (const food of catalog) { food.portionStep = portionStep(food); food.planningGroup ||= 'C'; }
 if(new Set(catalog.map(f=>f.id)).size!==catalog.length)throw new Error('Duplicate food IDs in shared catalog');
 export const catalogVersion=createHash('sha256').update(JSON.stringify(catalog)).digest('hex');
 dataReport.catalogVersion=catalogVersion;

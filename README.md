@@ -33,6 +33,16 @@ npm test            # nutrition, optimizer and HTTP integration tests
 6. In **Log meals**, actual logs override the assumption for the entire meal. Open **Edit meal / Log from menu**, tick foods and edit portions, add off-menu foods or dairy, then save. Save an empty meal to explicitly record a skipped meal, suppressing assumptions. Meal replacement checks for stale edits from another tab. Overview and nutrition history include clearly labeled logged + assumed intake; estimates are stored separately from actual logs and do not prove consumption.
 7. Export your profile, menu, actual and assumed intake, saved strategies and activation history as JSON from the journal.
 
+### Planning rules and strategy scores
+
+In **Weekly planner → Planning rules**, change the default minimum pieces (2 rotis, 1 dosa, 1 paratha, 2 idlis) and the A/B requirement. Each selected meal must contain at least one listed serving of a group A dish and one of a group B dish where available. A missing group is reported rather than invented. Piece counts account for bundled source servings. Exclusions and attendance take precedence; conflicting nutrient upper limits produce an actionable error. The normal two-serving search maximum expands if a configured minimum requires more.
+
+`data/nitk-planning-groups.json` explicitly classifies the 96 original NITK dish names: A for recognized staples (including paratha), B for recognizable sabjis/dal/sambar/rasam, C for the rest. All non-NITK catalog records start as C. C has no food/group minimum. Change any available food's group in **Menu items nutrition stats**; overrides are private to the account. Manual strategies may ignore these rules and still be saved or activated.
+
+Suggested plans, saved strategies and active versions display a score out of 100. Drafts have **Calculate draft score**. The score is a monotonic normalization of the optimizer's objective: `100 / (1 + max(0, -objective) / (7×7 + 1.5×micronutrientCount))`. It uses current profile targets, daily macro deviations, weekly nutrient shortfalls and the same small favorites bonus. Missing values remain flagged. Rule overrides are listed separately and do not make a manually edited plan unsaveable.
+
+New accounts get a one-time assumed 100% **nutrition-history indicator** baseline dated at account creation. This display assumption follows the existing nutrient-specific retention weights or daily reporting reset. It never creates food logs, raises actual intake totals or establishes measured body stores. Login does not reset it. Existing accounts and claimed legacy records keep their existing history without a new baseline.
+
 Existing prototype records are retained. Creating an account from a browser with its old UUID cookie claims that browser's unclaimed local record, preserving measurements, menus and actual logs. A missing old cookie cannot recover an anonymous record. No password reset or email verification is implemented.
 
 ## Accounts and persistence

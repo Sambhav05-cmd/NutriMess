@@ -26,6 +26,7 @@ function value(row, column) {
 }
 
 export function loadMessMenu(primary = []) {
+  const planningGroups = JSON.parse(fs.readFileSync(new URL('../data/nitk-planning-groups.json', import.meta.url)));
   const matches = JSON.parse(fs.readFileSync(new URL('../data/nitk-dataset-matches.json', import.meta.url)));
   const indb = loadINDB();
   const sourceRecords = new Map([...indb.recipes, ...indb.ingredients].map(r => [r.food_code, r]));
@@ -107,6 +108,7 @@ export function loadMessMenu(primary = []) {
       food.nutrientSources = { b12: { type: 'dataset', source: curd.source, sourceUrl: curd.sourceUrl } };
       food.basis += ' Missing B12 supplemented from the saved USDA whole-milk yogurt reference.';
     }
+    food.planningGroup = planningGroups[row.menu_item] || 'C';
     food.planningEligible = macros.every(k => food.nutrients[k] !== null);
     foods.set(id, food);
   }
@@ -123,7 +125,7 @@ export function loadMessMenu(primary = []) {
     withoutNutrition: [...foods.values()].filter(f => !f.planningEligible).length,
     knownByNutrient: Object.fromEntries(Object.keys(nutrients).map(k => [k, [...foods.values()].filter(f => f.nutrients[k] !== null).length])),
     sourceFrom: dates[0], sourceTo: dates.at(-1),
-    sourceFiles: [messMenuSource, messFoodSource, new URL('../data/nitk-dataset-matches.json', import.meta.url)].map(url => ({ file: url.pathname.split('/').at(-1), sha256: createHash('sha256').update(fs.readFileSync(url)).digest('hex') })) };
+    sourceFiles: [messMenuSource, messFoodSource, new URL('../data/nitk-dataset-matches.json', import.meta.url), new URL('../data/nitk-planning-groups.json', import.meta.url)].map(url => ({ file: url.pathname.split('/').at(-1), sha256: createHash('sha256').update(fs.readFileSync(url)).digest('hex') })) };
   const preset = { id: 'nitk-uploaded', name: 'NITK · uploaded mess menu', example: false,
     sourceUrl: '/api/mess-menu/source', sourceTitle: 'User-supplied NITK weekly mess menu and nutrient references',
     reviewedAt: dates[0], status: `Uploaded menu dated ${dates[0]} to ${dates.at(-1)}, repeating by weekday.`,

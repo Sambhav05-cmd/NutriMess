@@ -1,13 +1,14 @@
 import { randomBytes, randomUUID, scrypt as derive, timingSafeEqual, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
-import { normalizeGender, migrateProfileGender } from './nutrition.js';
+import { normalizeGender, migrateProfileGender, dateKey } from './nutrition.js';
+import { defaultPlanningRules } from './planning-rules.js';
 import { sampleMenu, slots } from './catalog.js';
 import { listColleges } from './colleges.js';
 import { ensureInitialPlan } from './initial-plan.js';
 const scrypt = promisify(derive);
 const digest = value => createHash('sha256').update(value).digest('hex');
 export function newStudent() {
-  return { profile: { name: 'Student', age: 21, gender: 'male', height: 163, weight: 65, activity: 'moderate', calorieCap: null, preferred: [], excluded: [], dairyFree: false },
+  return { nutritionBaseline: { date: dateKey(), coverage: 1, kind: 'assumed-start' }, profile: { name: 'Student', age: 21, gender: 'male', height: 163, weight: 65, activity: 'moderate', calorieCap: null, preferred: [], excluded: [], dairyFree: false, planningRules: defaultPlanningRules() },
     collegeId: 'custom', collegeName: 'My hostel', menu: sampleMenu(), attendance: Array.from({length:7}, () => Object.fromEntries(slots.map(s => [s,true]))), extras: [], logs: [], colleges: [], strategies: [], activations: [], completedMeals: [], plan: null };
 }
 export function installAccounts(app, storage, {response, startInitialPlan = ensureInitialPlan}) {
@@ -58,6 +59,7 @@ export function installAccounts(app, storage, {response, startInitialPlan = ensu
         const legacyToken=(req.headers.cookie||'').split(';').map(c=>c.trim()).find(c=>c.startsWith('nutrimess='))?.slice(10);
         const legacyRow=/^[a-f0-9-]{36}$/.test(legacyToken||'')&&!(await storage.getAccount(legacyToken))?await storage.getStudent(legacyToken):null;
         const s=legacyRow?{...newStudent(),...legacyRow.student}:newStudent();
+        if (legacyRow && !legacyRow.student.nutritionBaseline) delete s.nutritionBaseline;
         Object.assign(s.profile,{name:name.trim(),gender,...(!legacyRow?{height:gender==='female'?151:163,weight:gender==='female'?55:65}:{})});
         delete s.profile.sex;
         delete s.profile.decay;

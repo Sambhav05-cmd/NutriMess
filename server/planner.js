@@ -1,8 +1,14 @@
 import { add, zero, macros, micros, totals, shiftDate, upperLimits, portionStep } from './nutrition.js';
 import { slots } from './catalog.js';
+import { planningRulesFor, planningGroup, minimumPortions, mealRuleIssues } from './planning-rules.js';
 
 const beamWidth = 512;
-export const portionOptionsFor = food => Array.from({ length: 2 / portionStep(food) + 1 }, (_, i) => i * portionStep(food));
+export const portionOptionsFor = (food, rules) => {
+  const step = portionStep(food), minimum = rules ? minimumPortions(food, rules) : 0;
+  const groupMinimum = rules?.requireGroups ? rules[`groupMinimum${planningGroup(food, rules)}`] || 0 : 0;
+  const maximum = Math.max(2, minimum, groupMinimum);
+  return Array.from({ length: Math.ceil(maximum / step) + 1 }, (_, i) => i * step).filter(n => n + 1e-9 >= minimum);
+};
 
 export function isAllowed(food, profile) {
   const excluded = new Set(profile.excluded);
@@ -36,6 +42,7 @@ function dayAvailability(index,state,foods,start) {
   return {date,logs,baseline,work};
 }
 function dayCandidates(index, state, foods, target, start, cap) {
+  const rules = planningRulesFor(state.profile);
   const {date,baseline,work}=dayAvailability(index,state,foods,start);
   let beam = [{ total: baseline, entries: [], preference: 0 }];
   const weights = { breakfast: .25, lunch: .35, dinner: .3, snacks: .1 };
@@ -44,19 +51,29 @@ function dayCandidates(index, state, foods, target, start, cap) {
   for (const { meal, ids } of work) {
     for (let item = 0; item < ids.length; item++) {
       const id = ids[item], food = foods.get(id);
+      const portionsOptions = portionOptionsFor(food,rules);
+      const requiredGroups = rules.requireGroups ? ['A','B'].filter(group =>
+        ids.slice(0,item+1).some(id => planningGroup(foods.get(id),rules) === group)
+        && !ids.slice(item+1).some(id => planningGroup(foods.get(id),rules) === group)) : [];
       // Score partial states against progress through meal shares, reserving
       // room for later meals instead of filling the day at breakfast/lunch.
       const progress = (completed + weights[meal] * (item + 1) / ids.length) / weightSum;
       const partialTarget = Object.fromEntries(Object.keys(target).map(k => [k, Math.max(.001, baseline[k] + Math.max(0, target[k] - baseline[k]) * progress)]));
       const next = [];
       for (const candidate of beam) {
-        for (const portions of portionOptionsFor(food)) {
+        for (const portions of portionsOptions) {
           const total = add(candidate.total, food.nutrients, portions);
           if (!permissible(total, baseline)) continue;
           const entries = portions ? [...candidate.entries, { foodId: id, portions, meal, date }] : candidate.entries;
+          if (requiredGroups.some(group => rules[`groupMinimum${group}`] > 0 && !entries.some(e => e.meal === meal && planningGroup(foods.get(e.foodId),rules) === group && e.portions >= rules[`groupMinimum${group}`]))) continue;
           const preference = candidate.preference + (state.profile.preferred.includes(id) ? portions * .02 : 0);
           next.push({ total, entries, preference });
         }
+      }
+      if (!next.length) {
+        const error = new Error(`${date} ${meal}: no candidate satisfies the minimum portions, group rules and nutrient upper limits. Adjust your planning rules or menu.`);
+        error.status = 422;
+        throw error;
       }
       // Keep a diverse beam by calorie/protein bins as well as best scores.
       const rank = c => dailyScore(c.total, partialTarget) - .6 * micros.reduce((s, k) => s+targetPenalty(c.total[k],partialTarget[k],true),0)/micros.length+c.preference;
@@ -141,7 +158,7 @@ function summarizePlan(selected,state,foods,target,start,cap) {
     objective:{formula:'expm1(4 × relative target error)',micronutrients:'shortfall only; no reward for excess'},
     days: selected.map((c, i) => ({ date: shiftDate(start, i), total: c.total, entries: c.entries,
       loggedMeals: [...new Set(state.logs.filter(l => l.date === shiftDate(start, i)).map(l => l.meal))],
-      warnings: [c.total.calories < target.calories * .8 ? 'Available meals fall short of estimated energy needs.' : null,
+      warnings: [...(state.menu ? dayAvailability(i,state,foods,start).work.flatMap(({meal,ids}) => mealRuleIssues(c.entries.filter(e=>e.meal===meal),ids,foods,planningRulesFor(state.profile)).map(issue=>`${meal}: ${issue}`)) : []),c.total.calories < target.calories * .8 ? 'Available meals fall short of estimated energy needs.' : null,
         c.total.protein < target.protein * .9 ? 'Protein is below the planning target.' : null,
         c.total.calories > cap ? 'Calories exceed the planning target; this reduces the plan score.' : null,
         ...Object.entries(upperLimits).filter(([k, limit]) => c.total[k] > limit).map(([k]) => `Existing logged ${k} exceeds the general adult food-intake upper limit.`)].filter(Boolean) })),
@@ -155,6 +172,25 @@ function summarizePlan(selected,state,foods,target,start,cap) {
 // against the shared catalog when its nutrient records change.
 export function refreshPlanNutrition(plan,foods,target,state) {
   const selected=plan.days.map(d=>({entries:d.entries,total:totals(d.entries,foods)}));
-  const summary=summarizePlan(selected,{logs:[]},foods,target,plan.start,plan.calorieCap);
+  const summary=summarizePlan(selected,{...state,logs:[],completedMeals:[]},foods,target,plan.start,plan.calorieCap);
   return {...plan,...summary,...(state?{availability:availabilityBounds({...state,logs:[],completedMeals:[]},foods,target,plan.start)}:{}),method:plan.method,createdAt:plan.createdAt,nutritionUpdatedAt:new Date().toISOString()};
+}
+
+export function scoreStrategy(strategy, foods, target, profile, state) {
+  const rules = planningRulesFor(profile), scoringTarget = { ...target, calories: profile.calorieCap || target.calories };
+  const daily = strategy.days.map(day => totals(day.entries, foods));
+  const weekly = daily.reduce((sum, day) => add(sum, day), zero());
+  const preference = strategy.days.flatMap(day=>day.entries).reduce((sum,e)=>sum+(profile.preferred?.includes(e.foodId)?e.portions*.02:0),0);
+  const objectiveScore = daily.reduce((sum, day) => sum + dailyScore(day,scoringTarget),0) + 1.5 * weekScore(weekly,target) + preference;
+  const weight = 7 * 7 + 1.5 * micros.length;
+  const entries = strategy.days.flatMap(day=>day.entries).filter(e=>e.portions>0);
+  const incomplete = Object.keys(target).filter(k=>entries.some(e=>foods.get(e.foodId)?.nutrients[k]==null||foods.get(e.foodId)?.partialNutrients?.includes(k)));
+  const overrides = strategy.days.flatMap((day,i)=>slots.flatMap(meal=>{
+    const selected = day.entries.filter(e=>e.meal===meal);
+    if (state && !state.attendance[i][meal] && !selected.length) return [];
+    const available = [...new Set([...(state?.menu[i][meal]||[]),...selected.map(e=>e.foodId)])].filter(id=>foods.has(id)&&isAllowed(foods.get(id),profile));
+    return mealRuleIssues(selected,available,foods,rules).map(message=>({day:i,meal,message}));
+  }));
+  return { value: Math.round(1000 / (1 + Math.max(0,-objectiveScore) / weight)) / 10, objectiveScore, incomplete, overrides,
+    method: 'Daily macro fit plus weekly nutrient shortfalls; higher is better. Rule overrides are reported separately.' };
 }

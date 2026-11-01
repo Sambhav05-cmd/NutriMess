@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { catalog, foods, slots, dataReport, catalogVersion } from './catalog.js';
 import { nutrients, targets, totals, dateKey, monday, normalizeGender, portionStep } from './nutrition.js';
 import { turnoverEvidence, intakeHistory } from './turnover.js';
-import { generatePlan, refreshPlanNutrition } from './planner.js';
+import { generatePlan, refreshPlanNutrition, scoreStrategy } from './planner.js';
+import { planningRulesFor, defaultPlanningRules } from './planning-rules.js';
 import { openStorage } from './storage.js';
 import { ensureInitialPlan } from './initial-plan.js';
 
@@ -67,10 +68,14 @@ async function response(req) {
     await req.save();
   }
   const estimatedLogs = effectiveIntake(s), combined = [...s.logs, ...estimatedLogs];
-  return { ...s, estimatedLogs, today, weekStart: monday(today), targets: target, nutrients,
+  const score = strategy => scoreStrategy(strategy,foods,target,s.profile,s);
+  return { ...s, plan: s.plan ? {...s.plan, strategyScore: score(s.plan)} : null,
+    planningRules: planningRulesFor(s.profile), strategyScores: Object.fromEntries(s.strategies.map(strategy=>[strategy.id,score(strategy)])),
+    activeStrategyScore: s.activations.length ? score(s.activations.at(-1)) : null,
+    estimatedLogs, today, weekStart: monday(today), targets: target, nutrients,
     todayUnknown: Object.keys(nutrients).filter(k => combined.some(l => l.date === today && foods.get(l.foodId)?.nutrients[k] === null)),
     todayTotals: totals(combined.filter(l => l.date === today), foods),
-    turnoverEvidence, intakeHistory: intakeHistory(combined, foods, target, today) };
+    turnoverEvidence, intakeHistory: intakeHistory(combined, foods, target, today, s.nutritionBaseline) };
 }
 async function changed(req, res) { req.student.plan = null; await req.save(); res.json(await response(req)); }
 app.get('/api/catalog', async (req, res) => res.json({ foods: catalog, report: {...dataReport, referenceLibrary: await referenceLibrary(storage)}, colleges: [...(await listColleges(storage)), ...req.student.colleges] }));
@@ -86,8 +91,29 @@ app.put('/api/profile', async (req, res) => {
   req.student.profile = { name: text(p.name, 60, 'Name'), age: num(p.age, 19, 30, 'Age'), gender,
     height: num(p.height, 120, 230, 'Height (cm)'), weight: num(p.weight, 35, 250, 'Weight (kg)'), activity: p.activity,
     calorieCap: p.calorieCap === null ? null : num(p.calorieCap, 1000, 5000, 'Calorie ceiling'),
-    dairyFree: p.dairyFree, preferred: ids(p.preferred), excluded: ids(p.excluded) };
+    dairyFree: p.dairyFree, preferred: ids(p.preferred), excluded: ids(p.excluded), planningRules: planningRulesFor(req.student.profile) };
   await changed(req, res);
+});
+app.put('/api/planning-rules', async (req, res) => {
+  const input = req.body, rules = defaultPlanningRules();
+  if (typeof input.requireGroups !== 'boolean') fail('Choose whether to require food groups.');
+  rules.requireGroups = input.requireGroups;
+  for (const type of Object.keys(rules.minimums)) {
+    const value = num(input.minimums?.[type],0,10,`Minimum ${type} pieces`);
+    if (!Number.isInteger(value)) fail('Minimum piece counts must be whole numbers.');
+    rules.minimums[type] = value;
+  }
+  for (const group of ['A','B']) rules[`groupMinimum${group}`] = num(input[`groupMinimum${group}`],0,10,`Group ${group} minimum`);
+  if (!Array.isArray(input.overrides) || input.overrides.length > catalog.length) fail('Invalid food group overrides.');
+  const seen = new Set();
+  rules.overrides = input.overrides.map(row=>{
+    if (!row || typeof row !== 'object') fail('Invalid food group override.');
+    const id=foodId(row.foodId);
+    if (!['A','B','C'].includes(row.group) || seen.has(id)) fail('Use one valid group per food.');
+    seen.add(id);return {foodId:id,group:row.group};
+  });
+  req.student.profile.planningRules = rules;
+  await changed(req,res);
 });
 app.put('/api/menu', async (req, res) => {
   const menu = validateMenu(req.body.menu);

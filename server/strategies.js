@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import PDFDocument from 'pdfkit';
 import { dateKey, shiftDate, totals, portionStep } from './nutrition.js';
 import { slots } from './catalog.js';
+import { scoreStrategy } from './planner.js';
+import { targets } from './nutrition.js';
 
 // Keep estimates separate from actual logs; derive missed meals on every read,
 // including absences spanning restarts. Activation snapshots preserve history.
@@ -35,6 +37,10 @@ export function installStrategies(app, {foods,fail,text,num,date,meal,foodId,res
       })};
     })};
   }
+  app.post('/api/strategies/score',async(req,res)=>{
+    const strategy=validate({...req.body,name:req.body.name||'Draft strategy'});
+    res.json(scoreStrategy(strategy,foods,targets(req.student.profile),req.student.profile,req.student));
+  });
   app.post('/api/strategies',async(req,res)=>{
     if(req.student.strategies.length>=50)fail('You can save up to 50 strategies.');
     req.student.strategies.push({...validate(req.body),id:randomUUID(),updatedAt:new Date().toISOString(),revision:1});

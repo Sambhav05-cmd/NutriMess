@@ -10,7 +10,7 @@ export function halfLifeFor(key) {
   const r = retentionFor(key);
   return r === null ? null : Math.log(.5) / Math.log(r);
 }
-export function intakeHistory(logs, foods, targets, through) {
+export function intakeHistory(logs, foods, targets, through, baseline = null) {
   const throughMs = Date.parse(`${through}T12:00:00Z`);
   const daily = new Map();
   const unknown = {}, known = {};
@@ -36,7 +36,10 @@ export function intakeHistory(logs, foods, targets, through) {
       if (day.age === 0) todayCoverage = coverage;
       signal += coverage * (r === null ? (day.age === 0 ? 1 : 0) : r ** day.age);
     }
+    const baselineAge = baseline ? Math.round((throughMs - Date.parse(`${baseline.date}T12:00:00Z`)) / 86400000) : -1;
+    const startingCoverage = baselineAge >= 0 ? baseline.coverage * (r === null ? (baselineAge === 0 ? 1 : 0) : r ** baselineAge) : 0;
     return [key, { mode: r === null ? 'daily' : 'turnover', retainedTargetDays: signal,
+      startingCoverage, historyCoverage: Math.min(1, startingCoverage + signal), assumedStart: Boolean(baseline),
       todayCoverage, retentionPerDay: r, halfLifeDays: halfLifeFor(key),
       knownEntries: known[key] || 0, unknownEntries: unknown[key] || 0,
       // Zero recorded contributions never establish an empty biological store.
