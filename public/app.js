@@ -44,7 +44,7 @@ function total(entries) { return entries.reduce((s, e) => { const f = food(e.foo
 function toast(message, error = false) { const el = $('#toast'); el.textContent = message; el.className = `show${error ? ' error' : ''}`; clearTimeout(toast.timer); toast.timer = setTimeout(() => el.className = '', 4300); }
 async function api(path, method = 'GET', body) {
   const route=`/api/${path.split('?')[0]}`,start=performance.now(),controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),30000);
+  const timeout=setTimeout(()=>controller.abort(),60000);
   debug.log(`${method} ${route} started`);
   try {
     const res = await fetch(`/api/${path}`, { method, signal:controller.signal, headers: {...(body?{'Content-Type':'application/json'}:{}),...(debug.enabled?{'X-NutriMess-Debug':'1'}:{})}, body: body ? JSON.stringify(body) : undefined });
@@ -55,7 +55,7 @@ async function api(path, method = 'GET', body) {
     if (!res.ok) { const error = new Error(data.error || 'Request failed.'); error.status = res.status; throw error; }
     return data;
   } catch(error) {
-    const failure=error.name==='AbortError'?new Error(`${method} ${route} timed out after 30 seconds. Please try again.`):error;
+    const failure=error.name==='AbortError'?new Error(`${method} ${route} timed out after 60 seconds. Please try again.`):error;
     if(failure.status!==401)debug.fail(`${method} ${route} failed: ${failure.message}`);
     throw failure;
   } finally {clearTimeout(timeout);}
@@ -78,7 +78,7 @@ async function submitAuth(form) {
 let initialPlanTimer, initialPlanEpoch=0;
 function stopInitialPlanWatch(){clearTimeout(initialPlanTimer);initialPlanEpoch++;}
 function initialPlanMessage(){
-  return state?.initialPlan?.status==='pending'?'Preparing your initial weekly plan. This may take up to 30 seconds. You can use your account while it runs.':state?.initialPlan?.status==='failed'?'Your account is ready. Initial planning could not finish; you can generate a plan from Weekly planner.':'';
+  return state?.initialPlan?.status==='pending'?'Preparing your initial weekly plan. This may take up to 1 minute. You can use your account while it runs.':state?.initialPlan?.status==='failed'?'Your account is ready. Initial planning could not finish; you can generate a plan from Weekly planner.':'';
 }
 function watchInitialPlan(){
   if(state?.initialPlan?.status!=='pending')return;
@@ -307,7 +307,7 @@ async function generatePlanNow() {
   const buttons=[...document.querySelectorAll('[data-action=generate]')];
   for(const b of buttons){b.disabled=true;b.textContent='Building your plan…';}
   const notice=$('#plan-generation-status');
-  if(notice){notice.hidden=false;notice.textContent='Building your plan. This may take up to 30 seconds.';}
+  if(notice){notice.hidden=false;notice.textContent='Building your plan. This may take up to 1 minute.';}
   try {
     // Refresh the server's week before generating, including tabs left open
     // across Monday midnight. Keep any explicitly selected future week.

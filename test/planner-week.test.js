@@ -23,7 +23,7 @@ async function browser(savedStart,weekStart='2026-11-02') {
   const dom=new JSDOM(await fs.readFile(new URL('../public/index.html',import.meta.url),'utf8'),{url:'http://localhost/#planner',runScripts:'outside-only',virtualConsole:vc});
   const w=dom.window,posts=[],timeouts=new Map();
   const set=w.setTimeout.bind(w),clear=w.clearTimeout.bind(w);
-  w.setTimeout=(callback,ms,...args)=>{const id=set(callback,ms,...args);if(ms===30000)timeouts.set(id,callback);return id;};
+  w.setTimeout=(callback,ms,...args)=>{const id=set(callback,ms,...args);if(ms===60000)timeouts.set(id,callback);return id;};
   w.clearTimeout=id=>{timeouts.delete(id);clear(id);};
   w.structuredClone=structuredClone;w.scrollTo=()=>{};
   w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
@@ -80,18 +80,18 @@ test('generation preserves a selected future week',async()=>{
   }finally{b.w.close();}
 });
 
-test('generation displays the 30-second message, aborts at the timeout and enables retry',async()=>{
+test('generation displays the one-minute message, aborts at the timeout and enables retry',async()=>{
   const b=await browser();
   try{
     b.hang=true;b.q('[data-action="generate"]').click();
     await until(()=>b.posts.length===1);
     assert.equal(b.q('#plan-generation-status').hidden,false);
-    assert.match(b.q('#plan-generation-status').textContent,/may take up to 30 seconds/);
+    assert.match(b.q('#plan-generation-status').textContent,/may take up to 1 minute/);
     assert.equal(b.q('[data-action="generate"]').disabled,true);
     assert.equal(b.timeouts.size,1,'Only the pending request timeout should remain');
     for(const callback of b.timeouts.values())callback();
     await until(()=>!b.q('[data-action="generate"]').disabled);
-    assert.match(b.q('#toast').textContent,/timed out after 30 seconds/);
+    assert.match(b.q('#toast').textContent,/timed out after 60 seconds/);
     assert.equal(b.q('#plan-generation-status').hidden,true);
     b.hang=false;b.q('[data-action="generate"]').click();
     await until(()=>b.posts.length===2&&!b.q('[data-action="generate"]').disabled);

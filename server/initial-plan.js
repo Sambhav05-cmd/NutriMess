@@ -17,7 +17,7 @@ function pump() {
   try { worker = new Worker(new URL('./plan-worker.js', import.meta.url), { workerData: task.data, resourceLimits: { maxOldGenerationSizeMb: 256 } }); }
   catch (error) { active = null; task.reject(error); pump(); return; }
   task.worker = worker;
-  const timeout = setTimeout(() => finish(new Error('Initial plan generation timed out after 30 seconds')), 30000);
+  const timeout = setTimeout(() => finish(new Error('Initial plan generation timed out after 60 seconds')), 60000);
   function finish(error, result) {
     if (settled) return;
     settled = true;
