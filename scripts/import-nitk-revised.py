@@ -33,5 +33,5 @@ assert len({row[0] for row in records[1:]}) == 96, 'Duplicate foods in revised s
 with (root / 'nitk_mess_96_foods_per_indian_serving.csv').open(encoding='utf-8-sig', newline='') as old:
     assert {row['menu_item'] for row in csv.DictReader(old)} == {row[0] for row in records[1:]}, 'Menu identities changed'
 with output.open('w', encoding='utf-8', newline='') as handle:
-    csv.writer(handle).writerows(records)
+    csv.writer(handle, lineterminator='\n').writerows(records)
 print(f'Imported {len(records)-1} foods into {output.name}')
