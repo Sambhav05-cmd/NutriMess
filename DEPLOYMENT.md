@@ -83,3 +83,10 @@ The MongoDB tests use a unique disposable database name, never fall back to `MON
 ## Optional Netlify frontend
 
 The Netlify build remains available. Set `NUTRIMESS_API_ORIGIN` in Netlify to the Render HTTPS origin, build with `npm run build:netlify`, and publish `dist/netlify`. Set Render's `PUBLIC_ORIGIN` to the exact Netlify frontend origin. For manual upload, build locally with that environment variable and upload `dist/netlify`, including `_redirects` and `_headers`. Never publish the repository root, credentials, databases or workbooks as website files.
+
+
+## Planner release and rollback
+
+`npm start` now defaults to the Gaussian algorithm. Set `NUTRIMESS_PLANNER=main` for the updated exponential planner, or `NUTRIMESS_PLANNER=legacy` for the preserved original production planner. Restart/redeploy after changing the variable. `NITK_NUTRITION_SOURCE=original` also restores the earlier NITK nutrition input. No account or journal migration is needed; saved portion selections remain intact, while calculated nutrition and scores refresh on read.
+
+The production storage adapter is unchanged: Atlas remains required with `NODE_ENV=production`. Local experiment databases, demo credentials and local-only startup scripts are not shipped.

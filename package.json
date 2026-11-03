@@ -13,7 +13,11 @@
     "build:netlify": "node scripts/build-netlify.js",
     "migrate:sqlite": "node scripts/migrate-sqlite.js",
     "test:mongo": "node --test test/mongo-storage.test.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "dev:main": "NUTRIMESS_PLANNER=main node --watch server/index.js",
+    "dev:legacy": "NUTRIMESS_PLANNER=legacy node --watch server/index.js",
+    "test:current": "node --test test/food-analysis.test.js test/planner-modes.test.js experiments/gaussian/*.test.js",
+    "test:main": "NUTRIMESS_PLANNER=main node --test test/local-experiment.test.js"
   },
   "dependencies": {
     "csv-parse": "^7.0.3",

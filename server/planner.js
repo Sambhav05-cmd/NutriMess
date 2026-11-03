@@ -1,6 +1,6 @@
 import { add, zero, nutrients, macros, micros, totals, shiftDate, upperLimits, portionStep } from './nutrition.js';
 import { slots } from './catalog.js';
-import { planningRulesFor, planningGroup, minimumPortions, mealRuleIssues, dailyFoods } from './planning-rules.js';
+import { planningRulesFor, planningGroup, minimumPortions, mealRuleIssues, dailyFoods, foodBoundsFor } from './planning-rules.js';
 
 const beamWidth = 512;
 const nutrientKeys = Object.keys(nutrients);
@@ -11,11 +11,11 @@ const limitIndices = Object.keys(upperLimits).map(k => nutrientKeys.indexOf(k));
 const diversityBins = [['calories',20],['protein',2],['vitaminA',75],['calcium',60],['vitaminD',.25],['b12',.1]].map(([k,size]) => [nutrientKeys.indexOf(k),size]);
 const vector = total => nutrientKeys.map(k => total[k] || 0);
 const groupBit = group => group === 'A' ? 1 : group === 'B' ? 2 : 0;
-export const portionOptionsFor = (food, rules) => {
-  const step = portionStep(food), minimum = rules ? minimumPortions(food, rules) : 0;
-  const groupMinimum = rules?.requireGroups ? rules[`groupMinimum${planningGroup(food, rules)}`] || 0 : 0;
-  const maximum = Math.max(2, minimum, groupMinimum);
-  return Array.from({ length: Math.ceil(maximum / step) + 1 }, (_, i) => i * step).filter(n => n + 1e-9 >= minimum);
+export const portionOptionsFor = (food, rules, meal) => {
+  const step=portionStep(food), bound=foodBoundsFor(food,rules,meal);
+  const maximum=Math.min(5,bound?.max??5);
+  const minimum=maximum===0?0:Math.max(bound?.min||0,rules?minimumPortions(food,rules):0);
+  return Array.from({length:Math.floor(maximum/step)+1},(_,i)=>i*step).filter(n=>n+1e-9>=minimum);
 };
 
 export function isAllowed(food, profile, excluded = new Set(profile.excluded)) {
@@ -27,10 +27,13 @@ export function targetPenalty(actual,target,shortfallOnly=false) {
   // Cap extreme overages to keep even infeasible partial states finite.
   return Math.expm1(4*Math.min(error,12));
 }
+function caloriePenalty(actual,target){
+  return Math.expm1(4*Math.min(Math.max(0,actual/target-1),12));
+}
 function dailyScore(total, target) {
   return macros.reduce((s, k) => {
     const weight = k === 'protein' ? 3 : k === 'calories' ? 2 : 1;
-    return s - weight * targetPenalty(total[k],target[k]);
+    return s - weight * (k==='calories'?caloriePenalty(total[k],target[k]):targetPenalty(total[k],target[k],true));
   }, 0);
 }
 function weekScore(total, target) {
@@ -50,7 +53,7 @@ function dayAvailability(index,state,foods,start,context = searchContext(state, 
     if (!daily.enabled) continue;
     const logged = logs.filter(e => daily.ids.includes(e.foodId)).reduce((sum, e) => sum + e.portions, 0);
     // One daily serving, rather than one serving at every offered meal.
-    for (const w of work) for (const id of w.ids) if (daily.ids.includes(id)) w.fixed.set(id, 0);
+    for (const w of work) for (const id of w.ids) if (daily.ids.includes(id) && !(foodBoundsFor(foods.get(id),context.rules,w.meal)?.min>0)) w.fixed.set(id, 0);
     if (logged >= 1) continue;
     if (!daily.foodId) {
       ruleWarnings.push(`Daily ${daily.label} default skipped: the food is excluded, unavailable or dairy-free is selected.`);
@@ -64,31 +67,33 @@ function dayAvailability(index,state,foods,start,context = searchContext(state, 
     const step = portionStep(foods.get(daily.foodId));
     const portions = Math.ceil((1 - logged) / step - 1e-9) * step;
     if (!chosen.ids.includes(daily.foodId)) chosen.ids.push(daily.foodId);
-    chosen.fixed.set(daily.foodId, portions);
+    const custom=foodBoundsFor(foods.get(daily.foodId),context.rules,chosen.meal);
+    chosen.fixed.set(daily.foodId,custom?{min:Math.max(portions,custom.min)}:portions);
   }
-  for (const w of work) w.ids = w.ids.filter(id => w.fixed.get(id) !== 0);
+  for (const w of work) w.ids = w.ids.filter(id => w.fixed.get(id) !== 0 && foodBoundsFor(foods.get(id),context.rules,w.meal)?.max !== 0);
   return {date,logs,baseline,work:work.filter(w => w.ids.length),ruleWarnings};
 }
 function searchContext(state, foods) {
   const rules = planningRulesFor(state.profile);
   const excluded = new Set(state.profile.excluded), preferred = new Set(state.profile.preferred);
   const records = new Map();
-  function foodRecord(id) {
-    if (records.has(id)) return records.get(id);
+  function foodRecord(id, meal) {
+    const key=`${meal||'all'}:${id}`;
+    if (records.has(key)) return records.get(key);
     const food = foods.get(id);
     let record = null;
     if (food && macros.every(k => Number.isFinite(food.nutrients[k])) && isAllowed(food, state.profile, excluded)) {
       const group = planningGroup(food, rules), bit = groupBit(group);
       const minimum = rules.requireGroups ? rules[`groupMinimum${group}`] || 0 : 0;
       const values = vector(food.nutrients);
-      record = { bit, required: minimum > 0 ? bit : 0, options: portionOptionsFor(food, rules).map(portions => {
+      record = { bit, required: minimum > 0 ? bit : 0, options: portionOptionsFor(food, rules, meal).map(portions => {
         const total = values.map(value => value * portions);
         return { portions, total, upper: limitIndices.map(i => total[i]),
           group: minimum > 0 && portions >= minimum ? bit : 0,
           preference: preferred.has(id) ? portions * .02 : 0 };
       }) };
     }
-    records.set(id, record);
+    records.set(key, record);
     return record;
   }
   const offered = new Set(state.menu.flatMap(day => slots.flatMap(meal => day[meal])));
@@ -99,10 +104,11 @@ function searchContext(state, foods) {
     const foodId = !suppressed && enabled ? candidates.find(id => !!foodRecord(id)) : undefined;
     return { ...spec, enabled, foodId };
   });
-  return { rules, foodRecord, daily };
+  return { rules, foodRecord, daily, foods };
 }
-function infeasible(date, meal) {
-  const error = new Error(`${date} ${meal}: no candidate satisfies the minimum portions, group rules and nutrient upper limits. Adjust your planning rules or menu.`);
+function infeasible(date, meal, reason) {
+  const error = new Error(`${date} ${meal}: ${reason||'no candidate satisfies the minimum portions, group choices, food limits and nutrient upper limits. Adjust your planning rules or menu.'}`);
+  error.conflict={date,meal,reason:reason||'The combined portion, group and nutrient limits cannot all be satisfied.'};
   error.status = 422;
   throw error;
 }
@@ -112,19 +118,21 @@ function infeasible(date, meal) {
 // reserves the cheapest extra contribution of a qualifying remaining dish.
 // Bounds are per nutrient, so they can underestimate cost but never reject a
 // feasible choice merely because different dishes supply different minima.
-function prepareDay(available, context, domains) {
+function prepareDay(available, context) {
   const { date, baseline, work } = available;
   const limits = Object.entries(upperLimits).map(([k, limit]) => Math.max(limit, baseline[k]) + .001);
   const base = limitIndices.map(i => baseline[nutrientKeys[i]] || 0);
   const meals = work.map(({ meal, ids, fixed }) => {
     let required = 0;
     const items = ids.map(id => {
-      const record = context.foodRecord(id);
+      const record = context.foodRecord(id,meal);
       required |= record.required;
-      const domain = domains?.get(`${meal}:${id}`);
-      const options = record.options.filter(option => (!domain || domain.has(option.portions)) && (!fixed.has(id) || fixed.get(id) === option.portions) && option.upper.every((n, k) => base[k] + n <= limits[k]));
-      if (!options.length) infeasible(date, meal);
-      return { id, options: options.map(option => ({ ...option, entry: { foodId: id, portions: option.portions, meal, date } })) };
+      const options = record.options.filter(option => (!fixed.has(id) || (typeof fixed.get(id)==='object'?option.portions>=fixed.get(id).min:fixed.get(id) === option.portions)) && option.upper.every((n, k) => base[k] + n <= limits[k]));
+      if (!options.length) {
+        const food=context.foods.get(id),bound=foodBoundsFor(food,context.rules,meal);
+        infeasible(date,meal,`${food.originalMenuName||food.name} has no allowed quantity after its minimum (${Math.max(minimumPortions(food,context.rules),bound?.min||0)}), maximum (${bound?.max??5}), daily default and nutrient upper limits are applied. Adjust this food’s limits or the default.`);
+      }
+      return { id, bit:record.bit, options: options.map(option => ({ ...option, entry: { foodId: id, portions: option.portions, meal, date } })) };
     });
     return { meal, items, required };
   });
@@ -154,7 +162,7 @@ function prepareDay(available, context, domains) {
 }
 function dailyVectorScore(total, target) {
   let score = 0;
-  for (let i = 0; i < macroIndices.length; i++) score -= macroWeights[i] * targetPenalty(total[macroIndices[i]], target[macroIndices[i]]);
+  for (let i = 0; i < macroIndices.length; i++) score -= macroWeights[i] * (macros[i]==='calories'?caloriePenalty(total[macroIndices[i]],target[macroIndices[i]]):targetPenalty(total[macroIndices[i]],target[macroIndices[i]],true));
   return score;
 }
 function weeklyVectorScore(others, total, target) {
@@ -185,88 +193,6 @@ function retainBeam(next, target, getTotal = c => c.total, scale = 1) {
   return [...diverse].sort((a,b) => b.rank - a.rank);
 }
 
-// A shared food/meal variable is expanded once and updates every offered day.
-// Thus consistency reduces the search space instead of repairing a completed
-// plan afterwards, which could break group rules or nutrient upper limits.
-function consistentWeek(prepared, target, weeklyTarget) {
-  const weights = { breakfast: .25, lunch: .35, dinner: .3, snacks: .1 };
-  const variables = new Map();
-  for (let day = 0; day < prepared.length; day++) {
-    const p = prepared[day], base = vector(p.baseline);
-    const weightSum = p.meals.reduce((sum,m) => sum + weights[m.meal],0);
-    let completed = 0;
-    for (const { meal, items, required } of p.meals) {
-      for (let index = 0; index < items.length; index++) {
-        const item = items[index], key = `${meal}:${item.id}`;
-        if (!variables.has(key)) variables.set(key, { meal, id:item.id, members:[] });
-        const progress = (completed + weights[meal] * (index + 1) / items.length) / weightSum;
-        const partialTarget = target.map((n,k) => Math.max(.001,base[k] + Math.max(0,n-base[k])*progress));
-        variables.get(key).members.push({ day, item, required, progress, partialTarget });
-      }
-      completed += weights[meal];
-    }
-  }
-  // prepareDay uses this same food order for its suffix bounds.
-  const ordered = [...variables.values()].sort((a,b) => slots.indexOf(a.meal)-slots.indexOf(b.meal));
-  const initial = prepared.map(p => vector(p.baseline));
-  const sum = nutrientKeys.map((_,k) => initial.reduce((n,total) => n+total[k],0));
-  let beam = [{ totals:initial, weekly:sum, masks:prepared.map(()=>0), dailyRanks:prepared.map(()=>0), rankSum:0, preference:0, tail:null }];
-  const progress = prepared.map(()=>0);
-  let previousMeal;
-  for (const variable of ordered) {
-    if (variable.meal !== previousMeal) {
-      beam = beam.map(c => ({ ...c, masks:prepared.map(()=>0) }));
-      previousMeal = variable.meal;
-    }
-    const options = variable.members[0].item.options.filter(option => variable.members.every(m => m.item.options.some(o=>o.portions===option.portions)));
-    if (!options.length) infeasible(prepared[variable.members[0].day].date, variable.meal);
-    for (const m of variable.members) progress[m.day] = m.progress;
-    const elapsed = progress.reduce((sum,n)=>sum+n,0);
-    const partialWeek = weeklyTarget.map(n => Math.max(.001,n*elapsed));
-    const next = [];
-    for (const candidate of beam) for (const option of options) {
-      let feasible = true;
-      for (const m of variable.members) {
-        const mask = candidate.masks[m.day] | option.group;
-        if (((mask | m.item.remainingGroups) & m.required) !== m.required) { feasible = false; break; }
-        const missing = m.required & ~mask;
-        for (let k = 0; k < limitIndices.length; k++) {
-          const reserved = m.item.lower[k] + (missing & 1 ? m.item.extraA[k] : 0) + (missing & 2 ? m.item.extraB[k] : 0);
-          if (candidate.totals[m.day][limitIndices[k]] + option.upper[k] + reserved > prepared[m.day].limits[k]) { feasible = false; break; }
-        }
-        if (!feasible) break;
-      }
-      if (!feasible) continue;
-      const totals = candidate.totals.slice(), masks = candidate.masks.slice(), dailyRanks = candidate.dailyRanks.slice();
-      let rankSum = candidate.rankSum;
-      for (const m of variable.members) {
-        const total = option.portions ? totals[m.day].map((n,k)=>n+option.total[k]) : totals[m.day];
-        totals[m.day] = total; masks[m.day] |= option.group;
-        const rank = dailyVectorScore(total,m.partialTarget) - .6 * microIndices.reduce((s,k)=>s+targetPenalty(total[k],m.partialTarget[k],true),0)/micros.length;
-        rankSum += rank - dailyRanks[m.day]; dailyRanks[m.day] = rank;
-      }
-      const weekly = candidate.weekly.map((n,k)=>n+option.total[k]*variable.members.length);
-      const preference = candidate.preference + option.preference*variable.members.length;
-      const rank = rankSum + preference - 1.5*microIndices.reduce((s,k)=>s+targetPenalty(weekly[k],partialWeek[k],true),0);
-      const tail = option.portions ? { previous:candidate.tail, variable, portions:option.portions } : candidate.tail;
-      next.push({totals,weekly,masks,dailyRanks,rankSum,preference,rank,tail});
-    }
-    if (!next.length) infeasible(prepared[variable.members[0].day].date,variable.meal);
-    beam = retainBeam(next,partialWeek,c=>c.weekly,7);
-  }
-  let best, bestScore = -Infinity;
-  const empty = nutrientKeys.map(()=>0);
-  for (const c of beam) {
-    const score = c.totals.reduce((sum,total)=>sum+dailyVectorScore(total,target),0) + c.preference + 1.5*weeklyVectorScore(empty,c.weekly,weeklyTarget);
-    if (score > bestScore) { best=c; bestScore=score; }
-  }
-  const days = best.totals.map(total=>({total:Object.fromEntries(nutrientKeys.map((k,i)=>[k,total[i]])),entries:[]}));
-  for (let tail=best.tail; tail; tail=tail.previous) for (const m of tail.variable.members) {
-    days[m.day].entries.push({foodId:tail.variable.id,meal:tail.variable.meal,portions:tail.portions,date:prepared[m.day].date});
-  }
-  for (const day of days) day.entries.reverse();
-  return days;
-}
 function dayCandidates(prepared, target) {
   const { baseline, meals, limits } = prepared;
   const base = vector(baseline);
@@ -281,7 +207,7 @@ function dayCandidates(prepared, target) {
       // Score partial states against progress through meal shares, reserving
       // room for later meals instead of filling the day at breakfast/lunch.
       const progress = (completed + weights[meal] * (item + 1) / items.length) / weightSum;
-      const partialTarget = target.map((n, k) => Math.max(.001, base[k] + Math.max(0, n - base[k]) * progress));
+      const partialTarget = target.map((n, k) => nutrientKeys[k]==='calories'?n:Math.max(.001, base[k] + Math.max(0, n - base[k]) * progress));
       const next = [];
       for (const candidate of beam) {
         for (const option of options) {
@@ -309,36 +235,30 @@ function dayCandidates(prepared, target) {
   }
   return beam;
 }
+export function planningConflicts(state,foods,start) {
+  const context=searchContext(state,foods),conflicts=[];
+  for(let day=0;day<7;day++){
+    const available=dayAvailability(day,state,foods,start,context);
+    let hasConflict=false;
+    for(const work of available.work)try{prepareDay({...available,work:[work]},context);}catch(error){
+      if(error.status!==422)throw error;
+      conflicts.push(error.conflict||{date:available.date,meal:work.meal,reason:error.message});hasConflict=true;
+    }
+    if(!hasConflict)try{prepareDay(available,context);}catch(error){
+      if(error.status!==422)throw error;
+      conflicts.push(error.conflict||{date:available.date,reason:error.message});
+    }
+  }
+  return conflicts;
+}
+
 export function generatePlan(state, foods, target, start) {
   const cap = state.profile.calorieCap || target.calories;
   const scoringTarget = { ...target, calories: cap };
   const context = searchContext(state, foods), targetValues = vector(target), scoringValues = vector(scoringTarget);
   // Prepare every day before searching, so impossible hard rules fail early.
   const available = Array.from({ length: 7 }, (_, i) => dayAvailability(i, state, foods, start, context));
-  const domains = context.rules.consistentPortions ? new Map() : null;
-  if (context.rules.consistentPortions) {
-    const order = new Map();
-    for (const day of available) for (const meal of day.work) for (const id of meal.ids) {
-      const key = `${meal.meal}:${id}`;
-      if (!order.has(key)) order.set(key,order.size);
-    }
-    for (const day of available) for (const meal of day.work) meal.ids.sort((a,b)=>order.get(`${meal.meal}:${a}`)-order.get(`${meal.meal}:${b}`));
-    // Intersect portion domains across days before computing any suffix bounds.
-    // A serving forbidden on one occurrence cannot be tried on another day.
-    for (const day of available) for (const meal of day.work) for (const id of meal.ids) {
-      const key=`${meal.meal}:${id}`, prior=domains.get(key);
-      const options=context.foodRecord(id).options.filter(option=>
-        (!prior||prior.has(option.portions)) && (!meal.fixed.has(id)||meal.fixed.get(id)===option.portions)
-        && Object.entries(upperLimits).every(([k,limit],i)=>(day.baseline[k]||0)+option.upper[i]<=Math.max(limit,day.baseline[k]||0)+.001));
-      if (!options.length) infeasible(day.date,meal.meal);
-      domains.set(key,new Set(options.map(o=>o.portions)));
-    }
-  }
-  const prepared = available.map(day => prepareDay(day, context, domains));
-  if (context.rules.consistentPortions) {
-    const days = consistentWeek(prepared,scoringValues,targetValues);
-    return {...summarizePlan(days,state,foods,target,start,cap,available), method:'512-candidate shared-portion weekly beam search (approximate)', availability:availabilityBounds(state,foods,target,start)};
-  }
+  const prepared = available.map(day => prepareDay(day, context));
   const candidates = prepared.map(day => dayCandidates(day, scoringValues));
   for (const list of candidates) {
     for (const c of list) c.localScore = dailyVectorScore(c.total, scoringValues) + c.preference;
@@ -387,7 +307,7 @@ export function availabilityBounds(state,foods,target,start) {
     maximum=add(maximum,baseline);
     for(const entry of logs)for(const k of micros)if(foods.get(entry.foodId)?.nutrients[k]===null)incomplete.add(k);
     for(const meal of work)for(const id of meal.ids){
-      const food=foods.get(id), amount=meal.fixed.has(id)?meal.fixed.get(id):portionOptionsFor(food,context.rules).at(-1);
+      const food=foods.get(id), amount=meal.fixed.has(id)&&typeof meal.fixed.get(id)==='number'?meal.fixed.get(id):portionOptionsFor(food,context.rules,meal.meal).at(-1)??0;
       maximum=add(maximum,food.nutrients,amount);
       for(const k of micros)if(food.nutrients[k]===null)incomplete.add(k);
     }
@@ -400,10 +320,10 @@ function summarizePlan(selected,state,foods,target,start,cap,available) {
   const entries=[...selected.flatMap(c=>c.entries),...state.logs.filter(l=>l.date>=start&&l.date<=shiftDate(start,6))];
   const noData=micros.filter(k=>entries.length>0&&entries.every(e=>foods.get(e.foodId)?.nutrients[k]===null));
   return { start, createdAt: new Date().toISOString(), calorieCap: cap, method: '512-candidate beam search + exponential target-gap penalties + multi-start weekly refinement (approximate)',
-    objective:{formula:'expm1(4 × relative target error)',micronutrients:'shortfall only; no reward for excess'},
+    objective:{formula:'expm1(4 × relative target error)',calories:'excess only; no reward or penalty at or below target',otherNutrients:'shortfall only; no reward or penalty for excess'},
     days: selected.map((c, i) => ({ date: shiftDate(start, i), total: c.total, entries: c.entries,
       loggedMeals: [...new Set(state.logs.filter(l => l.date === shiftDate(start, i)).map(l => l.meal))],
-      warnings: [...(state.menu ? (available?.[i]||dayAvailability(i,state,foods,start)).work.flatMap(({meal,ids}) => mealRuleIssues(c.entries.filter(e=>e.meal===meal),ids,foods,planningRulesFor(state.profile)).map(issue=>`${meal}: ${issue}`)) : []),...(available?.[i]?.ruleWarnings||[]),c.total.calories < target.calories * .8 ? 'Available meals fall short of estimated energy needs.' : null,
+      warnings: [...(state.menu ? (available?.[i]||dayAvailability(i,state,foods,start)).work.flatMap(({meal,ids}) => mealRuleIssues(c.entries.filter(e=>e.meal===meal),ids,foods,planningRulesFor(state.profile),meal).map(issue=>`${meal}: ${issue}`)) : []),...(available?.[i]?.ruleWarnings||[]),c.total.calories < target.calories * .8 ? 'Available meals fall short of estimated energy needs.' : null,
         c.total.protein < target.protein * .9 ? 'Protein is below the planning target.' : null,
         c.total.calories > cap ? 'Calories exceed the planning target; this reduces the plan score.' : null,
         ...Object.entries(upperLimits).filter(([k, limit]) => c.total[k] > limit).map(([k]) => `Existing logged ${k} exceeds the general adult food-intake upper limit.`)].filter(Boolean) })),
@@ -434,7 +354,7 @@ export function scoreStrategy(strategy, foods, target, profile, state) {
     const selected = day.entries.filter(e=>e.meal===meal);
     if (state && !state.attendance[i][meal] && !selected.length) return [];
     const available = [...new Set([...(state?.menu[i][meal]||[]),...selected.map(e=>e.foodId)])].filter(id=>foods.has(id)&&isAllowed(foods.get(id),profile));
-    return mealRuleIssues(selected,available,foods,rules).map(message=>({day:i,meal,message}));
+    return mealRuleIssues(selected,available,foods,rules,meal).map(message=>({day:i,meal,message}));
   }));
   for (let day=0; day<strategy.days.length; day++) for (const spec of dailyFoods) {
     if (!rules[spec.rule] || profile.dairyFree || spec.ids.some(id=>profile.excluded?.includes(id))) continue;
@@ -457,5 +377,5 @@ export function scoreStrategy(strategy, foods, target, profile, state) {
     }));
   }
   return { value: Math.round(1000 / (1 + Math.max(0,-objectiveScore) / weight)) / 10, objectiveScore, incomplete, overrides,
-    method: 'Daily macro fit plus weekly nutrient shortfalls; higher is better. Rule overrides are reported separately.' };
+    method: 'Calorie excess penalty, daily protein/carbohydrate/fat shortfalls and weekly nutrient shortfalls. Calories at or below target have no score effect. Nutrient excess earns no benefit; calorie excess is penalized. Rule overrides are reported separately.' };
 }

@@ -1,14 +1,14 @@
 import { portionStep } from './nutrition.js';
 export const planningGroupName = group => ({ A: 'Carb base group', B: 'Curry group', C: 'Group C' })[group];
 
-export const defaultPlanningRules = () => ({ minimums: { roti: 2, dosa: 1, paratha: 1, idli: 2 }, requireGroups: true, groupMinimumA: 1, groupMinimumB: 1, dailyMilk: true, dailyCurd: true, consistentPortions: true, overrides: [] });
+export const defaultPlanningRules = () => ({ minimums: { roti: 2, dosa: 1, paratha: 1, idli: 2 }, requireGroups: true, groupMinimumA: 1, groupMinimumB: 1, dailyMilk: true, dailyCurd: true, consistentPortions: false, foodBounds: [], overrides: [] });
 export const dailyFoods = [
   { rule: 'dailyMilk', label: 'milk', meal: 'breakfast', ids: ['milk', 'nitk-milk-with-bournvita'] },
   { rule: 'dailyCurd', label: 'curd', meal: 'lunch', ids: ['curd', 'nitk-curd'] }
 ];
 export function planningRulesFor(profile) {
   const defaults = defaultPlanningRules(), saved = profile?.planningRules || {};
-  return { ...defaults, ...saved, minimums: { ...defaults.minimums, ...saved.minimums }, overrides: saved.overrides || [] };
+  return { ...defaults, ...saved, minimums: { ...defaults.minimums, ...saved.minimums }, overrides: saved.overrides || [], foodBounds: saved.foodBounds || [], consistentPortions: false };
 }
 export function planningGroup(food, rules) {
   return rules.overrides.find(row => row.foodId === food.id)?.group || food.planningGroup || 'C';
@@ -30,10 +30,15 @@ export function minimumPortions(food, rules) {
   const step = portionStep(food);
   return Math.ceil((rules.minimums[type] / pieces) / step - 1e-9) * step;
 }
-export function mealRuleIssues(entries, available, foods, rules) {
+export function foodBoundsFor(food, rules, meal) {
+  return rules?.foodBounds?.find(row => row.foodId === food.id && row.meal === meal)
+    || rules?.foodBounds?.find(row => row.foodId === food.id && row.meal === 'all');
+}
+export function mealRuleIssues(entries, available, foods, rules, meal=entries[0]?.meal) {
   const issues = [];
+  available=available.filter(id=>foodBoundsFor(foods.get(id),rules,meal)?.max!==0);
   for (const id of available) {
-    const food = foods.get(id), minimum = minimumPortions(food, rules);
+    const food = foods.get(id), bound=foodBoundsFor(food,rules,meal), minimum=bound?.max===0?0:Math.max(minimumPortions(food,rules),bound?.min||0);
     const amount = entries.filter(e => e.foodId === id).reduce((sum, e) => sum + e.portions, 0);
     if (amount + 1e-9 < minimum) issues.push(`${food.originalMenuName || food.name}: minimum ${minimum} listed serving(s).`);
   }
@@ -44,6 +49,10 @@ export function mealRuleIssues(entries, available, foods, rules) {
       if (!available.some(id => planningGroup(foods.get(id), rules) === group)) issues.push(`No ${planningGroupName(group).toLowerCase()} dish is available for this meal.`);
       else if (!entries.some(e => planningGroup(foods.get(e.foodId), rules) === group && e.portions >= minimum)) issues.push(`Choose at least ${minimum} serving(s) of one ${planningGroupName(group).toLowerCase()} dish.`);
     }
+  }
+  for (const entry of entries) {
+    const bound=foodBoundsFor(foods.get(entry.foodId),rules,entry.meal);
+    if (bound && (entry.portions<bound.min || entry.portions>bound.max)) issues.push(`${foods.get(entry.foodId).name}: outside the configured min/max portions.`);
   }
   return issues;
 }

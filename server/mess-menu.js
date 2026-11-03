@@ -5,7 +5,9 @@ import { nutrients, macros } from './nutrition.js';
 import { loadINDB, values as indbValues } from './indb.js';
 
 export const messMenuSource = new URL('../nitk_mess_weekly_nutrients_all_estimated.csv', import.meta.url);
-export const messFoodSource = new URL('../nitk_mess_96_foods_per_indian_serving.csv', import.meta.url);
+const revisedFoodSource = new URL('../data/nitk-mess-revised-realistic-servings.csv', import.meta.url);
+const revised = fs.existsSync(revisedFoodSource) && process.env.NITK_NUTRITION_SOURCE !== 'original';
+export const messFoodSource = revised ? revisedFoodSource : new URL('../nitk_mess_96_foods_per_indian_serving.csv', import.meta.url);
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const referenceAliases = { chapati: 'chapati', upma: 'upma', 'rice cooked': 'rice' };
 const fields = {
@@ -54,9 +56,9 @@ export function loadMessMenu(primary = []) {
       id, name: row.menu_item, aliases: `NITK mess ${referenceName}`, group: 'NITK mess menu', kind: 'mess-dish',
       serving: `${row.serving_unit} · ${grams} g${dry ? ' dry · before milk/water' : ''}`, grams, ingredients: reference?.ingredients || [],
       dairy: Boolean(reference?.dairy || /curd|paneer|butter|milk|kheer|lassi|custard|ice cream|jamun|makhani/i.test(`${row.menu_item}; ${referenceName}`)),
-      nutrients: values, source: 'Uploaded NITK estimates per Indian serving',
+      nutrients: values, source: revised ? 'Revised realistic-serving estimates · supplied NITK workbook' : 'Uploaded NITK estimates per Indian serving',
       sourceUrl: sourceUrls[0] || null, sourceUrls, portionSourceUrls, dataStatus: row.nutrient_evidence, confidence: row.nutrient_evidence,
-      basis: `Uploaded modeled estimate per ${row.serving_unit} (${grams} g${dry?' dry cereal':''}). ${row.data_quality_note} Vitamin K uses K1 only.`,
+      basis: `${revised?'Temporary source: nitk_mess_96_foods_revised_realistic_servings.xlsx, All Nutrients 96. '+(row.revision_reason||'')+' ':''}Uploaded modeled estimate per ${row.serving_unit} (${grams} g${dry?' dry cereal':''}). ${row.data_quality_note} Vitamin K uses K1 only.`,
       menuCount: Number(row.menu_item.match(/\((\d+)\)/)?.[1]) || null,
       referenceFood: referenceName || null,
       portion: {
@@ -65,14 +67,14 @@ export function loadMessMenu(primary = []) {
         rangeHighGrams: value(row, 'portion_size_range_g_high'), explanation: row.portion_explanation
       },
       nutritionModel: {
-        quality: row.nutrient_evidence, fortification: row.fortification_and_recipe_caution,
+        quality: row.nutrient_evidence, ingredients: row.estimated_recipe_ingredients || null, revisionStatus: row.revision_status || null, fortification: row.fortification_and_recipe_caution,
         cautions: row.data_quality_note
       },
       partialNutrients: ['vitaminK'],
       additionalNutrients: Object.fromEntries(Object.entries(extraFields).map(([k, [column, name, unit]]) => [k, { name, unit, value: value(row, column) }])),
       planningEligible: macros.every(k => values[k] !== null)
     };
-    const match = matches[row.menu_item];
+    const match = revised ? null : matches[row.menu_item];
     if (match?.dataset === 'IFCT') {
       const selected = primary.find(f => f.id === `ifct-${match.code}`);
       if (!selected) throw new Error(`Missing IFCT menu reference: ${match.code}`);
@@ -118,8 +120,8 @@ export function loadMessMenu(primary = []) {
     if (!menu[day][meal].includes(id)) menu[day][meal].push(id);
   }
   const dates = rows.map(r => r.date).sort();
-  const report = { source: 'NITK menu with selected INDB/IFCT dataset references; weekly CSV supplies scheduling only', rows: rows.length, dishes: foods.size,
-    sourcePolicy:['First selected INDB candidate, or IFCT candidate when no INDB candidate exists','Uploaded values retained only when no candidate was selected'],
+  const report = { activeSource: revised?'revised-realistic-servings':'original-dataset-references', source: revised?'Supplied revised realistic-serving workbook, All Nutrients 96; weekly CSV supplies scheduling only':'NITK menu with selected INDB/IFCT dataset references; weekly CSV supplies scheduling only', rows: rows.length, dishes: foods.size,
+    sourcePolicy:revised?['All 96 NITK foods use the supplied revised workbook values directly','INDB/IFCT replacement and nutrient supplementation are disabled for this temporary NITK source']:['First selected INDB candidate, or IFCT candidate when no INDB candidate exists','Uploaded values retained only when no candidate was selected'],
     primaryMatchedFoods:[...foods.values()].filter(f=>f.primaryReference).map(f=>({foodId:f.id,reference:f.primaryReference.foodId,fallbackNutrients:f.fallbackNutrients})),
     withNutrition: [...foods.values()].filter(f => f.planningEligible).length,
     withoutNutrition: [...foods.values()].filter(f => !f.planningEligible).length,
@@ -129,6 +131,6 @@ export function loadMessMenu(primary = []) {
   const preset = { id: 'nitk-uploaded', name: 'NITK · uploaded mess menu', example: false,
     sourceUrl: '/api/mess-menu/source', sourceTitle: 'User-supplied NITK weekly mess menu and nutrient references',
     reviewedAt: dates[0], status: `Uploaded menu dated ${dates[0]} to ${dates.at(-1)}, repeating by weekday.`,
-    mappingNote: 'Foods use the first selected INDB/IFCT reference, including its name, nutrients and serving definition. Original IDs retain the weekly schedule. Five foods without selected candidates retain uploaded values. Actual mess preparation may differ.', menu };
+    mappingNote: revised?'Temporarily uses the supplied realistic-serving workbook directly for all 96 foods. Food IDs and weekday availability are unchanged. Values are estimates; actual preparation may differ.':'Foods use the first selected INDB/IFCT reference, including its name, nutrients and serving definition. Original IDs retain the weekly schedule. Five foods without selected candidates retain uploaded values. Actual mess preparation may differ.', menu };
   return { foods: [...foods.values()], preset, report };
 }

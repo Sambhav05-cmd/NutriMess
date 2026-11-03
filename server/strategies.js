@@ -1,8 +1,9 @@
+import { foodImpacts } from './food-impact.js';
 import { randomUUID } from 'node:crypto';
 import PDFDocument from 'pdfkit';
 import { dateKey, shiftDate, totals, portionStep } from './nutrition.js';
 import { slots } from './catalog.js';
-import { scoreStrategy } from './planner.js';
+import { scoreStrategy } from './active-planner.js';
 import { targets } from './nutrition.js';
 
 // Keep estimates separate from actual logs; derive missed meals on every read,
@@ -30,7 +31,7 @@ export function installStrategies(app, {foods,fail,text,num,date,meal,foodId,res
       if(!Array.isArray(d?.entries))fail('Each day needs a list of foods.');
       const seen=new Set();
       return {entries:d.entries.map(e=>{
-        const entry={foodId:foodId(e.foodId),meal:meal(e.meal),portions:num(e.portions,.1,10,'Portions')},key=`${entry.meal}:${entry.foodId}`;
+        const entry={foodId:foodId(e.foodId),meal:meal(e.meal),portions:num(e.portions,.1,Number.MAX_VALUE,'Portions')},key=`${entry.meal}:${entry.foodId}`;
         if(portionStep(foods.get(entry.foodId))===1&&!Number.isInteger(entry.portions))fail('Use whole portions for foods not served in bowls.');
         if(!Number.isInteger(entry.portions/portionStep(foods.get(entry.foodId))))fail('Use multiples of half a portion for bowl or katori servings.');
         if(seen.has(key))fail('Each food can appear once per meal. Combine its portions.');seen.add(key);
@@ -38,6 +39,14 @@ export function installStrategies(app, {foods,fail,text,num,date,meal,foodId,res
       })};
     })};
   }
+  app.post('/api/strategies/impact',async(req,res)=>{
+    const strategy=validate({...req.body,name:req.body.name||'Editing preview'});
+    const day=num(req.body.day,0,6,'Day');if(!Number.isInteger(day))fail('Choose a whole day index.');
+    const slot=meal(req.body.meal);
+    if(!Array.isArray(req.body.candidates)||req.body.candidates.length>150)fail('Choose up to 150 candidate foods.');
+    const requests=[...new Set(req.body.candidates.map(foodId))].map(id=>({day,meal:slot,foodId:id}));
+    res.json(foodImpacts(strategy,foods,targets(req.student.profile),req.student.profile,req.student,requests,'addition'));
+  });
   app.post('/api/strategies/score',async(req,res)=>{
     const strategy=validate({...req.body,name:req.body.name||'Draft strategy'});
     res.json(scoreStrategy(strategy,foods,targets(req.student.profile),req.student.profile,req.student));

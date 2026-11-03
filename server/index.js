@@ -1,3 +1,4 @@
+import { foodImpacts } from './food-impact.js';
 import express from 'express';
 import helmet from 'helmet';
 import { randomUUID } from 'node:crypto';
@@ -10,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { catalog, foods, slots, dataReport, catalogVersion } from './catalog.js';
 import { nutrients, targets, totals, dateKey, monday, normalizeGender, portionStep } from './nutrition.js';
 import { turnoverEvidence, intakeHistory } from './turnover.js';
-import { generatePlan, refreshPlanNutrition, scoreStrategy } from './planner.js';
+import { generatePlan, refreshPlanNutrition, scoreStrategy, planningConflicts, scoringMode } from './active-planner.js';
 import { planningRulesFor, defaultPlanningRules, planningGroupName } from './planning-rules.js';
 import { openStorage } from './storage.js';
 import { ensureInitialPlan } from './initial-plan.js';
@@ -46,7 +47,7 @@ function text(value, max, label) { if (typeof value !== 'string' || !value.trim(
 function date(value) { if (typeof value !== 'string' || !/^20\d{2}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(`${value}T12:00:00Z`)) || new Date(`${value}T12:00:00Z`).toISOString().slice(0,10) !== value) fail('Use a valid date in YYYY-MM-DD format.'); return value; }
 function foodId(id) { if (typeof id !== 'string' || !foods.has(id)) fail('Choose a food from the catalog.'); return id; }
 function portionAmount(id, value) {
-  const amount = num(value, .1, 10, 'Portions');
+  const amount = num(value, .1, Number.MAX_VALUE, 'Portions');
   if (portionStep(foods.get(id)) === 1 && !Number.isInteger(amount)) fail('Use whole portions for foods not served in bowls.');
   if (!Number.isInteger(amount / portionStep(foods.get(id)))) fail('Use multiples of half a portion for bowl or katori servings.');
   return amount;
@@ -70,8 +71,8 @@ async function response(req) {
   }
   const estimatedLogs = effectiveIntake(s), combined = [...s.logs, ...estimatedLogs];
   const score = strategy => scoreStrategy(strategy,foods,target,s.profile,s);
-  return { ...s, plan: s.plan ? {...s.plan, strategyScore: score(s.plan)} : null,
-    planningRules: planningRulesFor(s.profile), strategyScores: Object.fromEntries(s.strategies.map(strategy=>[strategy.id,score(strategy)])),
+  return { ...s, plan: s.plan ? {...s.plan, strategyScore: score(s.plan), foodImpacts: foodImpacts(s.plan,foods,target,s.profile,s,s.plan.days.flatMap((day,i)=>day.entries.map(e=>({day:i,meal:e.meal,foodId:e.foodId})))).impacts} : null,
+    scoringMode, planningRules: planningRulesFor(s.profile), strategyScores: Object.fromEntries(s.strategies.map(strategy=>[strategy.id,score(strategy)])),
     activeStrategyScore: s.activations.length ? score(s.activations.at(-1)) : null,
     estimatedLogs, today, weekStart: monday(today), targets: target, nutrients,
     todayUnknown: Object.keys(nutrients).filter(k => combined.some(l => l.date === today && foods.get(l.foodId)?.nutrients[k] === null)),
@@ -104,11 +105,11 @@ app.put('/api/planning-rules', async (req, res) => {
     rules[key] = input[key] ?? rules[key];
   }
   for (const type of Object.keys(rules.minimums)) {
-    const value = num(input.minimums?.[type],0,10,`Minimum ${type} pieces`);
+    const value = num(input.minimums?.[type],0,5,`Minimum ${type} pieces`);
     if (!Number.isInteger(value)) fail('Minimum piece counts must be whole numbers.');
     rules.minimums[type] = value;
   }
-  for (const group of ['A','B']) rules[`groupMinimum${group}`] = num(input[`groupMinimum${group}`],0,10,`${planningGroupName(group)} minimum`);
+  for (const group of ['A','B']) rules[`groupMinimum${group}`] = num(input[`groupMinimum${group}`],0,5,`${planningGroupName(group)} minimum`);
   if (!Array.isArray(input.overrides) || input.overrides.length > catalog.length) fail('Invalid food group overrides.');
   const seen = new Set();
   rules.overrides = input.overrides.map(row=>{
@@ -116,6 +117,17 @@ app.put('/api/planning-rules', async (req, res) => {
     const id=foodId(row.foodId);
     if (!['A','B','C'].includes(row.group) || seen.has(id)) fail('Use one valid group per food.');
     seen.add(id);return {foodId:id,group:row.group};
+  });
+  if (!Array.isArray(input.foodBounds||[]) || (input.foodBounds||[]).length>catalog.length*5) fail('Invalid per-food limits.');
+  const boundKeys=new Set();
+  rules.foodBounds=(input.foodBounds||[]).map(row=>{
+    const id=foodId(row.foodId),slot=row.meal==='all'?'all':meal(row.meal);
+    const offered=req.student.menu.some(day=>(slot==='all'?slots.flatMap(s=>day[s]):day[slot]).includes(id));
+    if(!offered)fail('Individual food limits must refer to a food in your current menu at the selected meal.');
+    const min=num(row.min,0,5,'Minimum portions'),max=num(row.max,0,5,'Maximum portions'),step=portionStep(foods.get(id));
+    if(min>max||!Number.isInteger(min/step)||!Number.isInteger(max/step)) fail('Use valid min/max quantities in the food’s portion steps.');
+    const key=`${slot}:${id}`;if(boundKeys.has(key))fail('Use one limit per food and meal.');boundKeys.add(key);
+    return {foodId:id,meal:slot,min,max};
   });
   req.student.profile.planningRules = rules;
   await changed(req,res);
@@ -164,7 +176,7 @@ app.put('/api/logs/meal', async (req, res) => {
   const portions = new Map();
   for (const entry of req.body.entries) {
     const id = foodId(entry?.foodId), amount = portionAmount(id, entry.portions);
-    portions.set(id, num((portions.get(id) || 0) + amount, .1, 10, 'Total portions of a food'));
+    portions.set(id, num((portions.get(id) || 0) + amount, .1, Number.MAX_VALUE, 'Total portions of a food'));
   }
   if (req.student.logs.length - existing.length + portions.size > 15000) fail('The local log limit has been reached.');
   const replacement = [...portions].map(([id, amount]) => ({ id: randomUUID(), date: d, meal: slot, foodId: id, portions: amount }));
@@ -184,6 +196,12 @@ app.post('/api/plan/log-meal', async (req, res) => {
   await changed(req, res);
 });
 installStrategies(app, { foods, fail, text, num, date, meal, foodId, response });
+app.post('/api/plan/check',async(req,res)=>{
+  const start=date(req.body.start||monday());
+  if(monday(start)!==start||start<monday())fail('Choose the current week or a future Monday.');
+  const planning={...req.student,logs:[],completedMeals:[]};
+  res.json({conflicts:planningConflicts(planning,foods,start)});
+});
 const lastPlan = new Map();
 app.post('/api/plan', async (req, res) => {
   const now = Date.now();
